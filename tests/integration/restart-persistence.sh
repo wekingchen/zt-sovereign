@@ -3,11 +3,14 @@ set -Eeuo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$ROOT"
 
-hash_file() { sha256sum "$1" | awk '{print $1}'; }
-root_before=$(hash_file data/planet/one/identity.secret)
-current_before=$(hash_file data/planet/world/current.c25519)
-previous_before=$(hash_file data/planet/world/previous.c25519)
-controller_before=$(hash_file data/controller/one/identity.secret)
+hash_in_container() {
+  docker compose exec -T sovereign sha256sum "$1" | awk '{print $1}'
+}
+
+root_before=$(hash_in_container /data/planet/one/identity.secret)
+current_before=$(hash_in_container /data/planet/world/current.c25519)
+previous_before=$(hash_in_container /data/planet/world/previous.c25519)
+controller_before=$(hash_in_container /data/controller/one/identity.secret)
 
 docker compose restart sovereign >/dev/null
 for _ in $(seq 1 120); do
@@ -17,9 +20,9 @@ for _ in $(seq 1 120); do
 done
 [[ "$(docker inspect --format '{{.State.Health.Status}}' zerotier-sovereign)" == healthy ]]
 
-test "$root_before" = "$(hash_file data/planet/one/identity.secret)"
-test "$current_before" = "$(hash_file data/planet/world/current.c25519)"
-test "$previous_before" = "$(hash_file data/planet/world/previous.c25519)"
-test "$controller_before" = "$(hash_file data/controller/one/identity.secret)"
+test "$root_before" = "$(hash_in_container /data/planet/one/identity.secret)"
+test "$current_before" = "$(hash_in_container /data/planet/world/current.c25519)"
+test "$previous_before" = "$(hash_in_container /data/planet/world/previous.c25519)"
+test "$controller_before" = "$(hash_in_container /data/controller/one/identity.secret)"
 
 echo "PASS restart persistence"
