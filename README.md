@@ -189,7 +189,7 @@ docker restart zerotier-sovereign
 
 1. ShellCheck / Python syntax
 2. 自有功能单元测试
-3. 从源码构建统一镜像
+3. 在原生 amd64 Runner 上从源码构建统一镜像，并使用持久化 BuildKit cache
 4. 启动 `zerotier-sovereign + PostgreSQL`
 5. 检查 PLANET / Controller / ZTNet
 6. 通过真实 Controller REST API 创建、读取、删除临时 Network
@@ -233,12 +233,18 @@ ghcr.io/<owner>/<repo>:candidate
 ghcr.io/<owner>/<repo>:sha-xxxxxxxxxxxx
 ```
 
-支持：
+构建不再使用 QEMU 模拟 ARM64，而是并行使用 GitHub 原生 Runner：
 
 ```text
-linux/amd64
-linux/arm64
+ubuntu-24.04      -> linux/amd64
+ubuntu-24.04-arm  -> linux/arm64
+                         ↓
+                  merge manifest
 ```
+
+两个架构拥有独立、长期复用的 BuildKit cache scope。main CI、Candidate 和 Release 会共享对应架构缓存；例如只升级 ZTNet 时，未变化的 ZeroTier PLANET / Controller 构建层应直接命中缓存。PR 使用独立 cache scope，不覆盖 main 的发布缓存。
+
+公共仓库使用标准 GitHub-hosted ARM64 Runner；后续如果仓库改为私有仓库，需要重新确认对应 Actions 额度与计费策略。
 
 ### `Release`
 
@@ -249,7 +255,7 @@ git tag v0.3.0
 git push origin v0.3.0
 ```
 
-会再次执行单测和完整集成冒烟测试，然后发布不可变版本：
+会再次执行单测和完整集成冒烟测试。amd64 验证构建复用 main cache；随后 amd64 / arm64 在各自原生 Runner 上并行构建，并复用 Candidate 已生成的分架构缓存，然后发布不可变版本：
 
 ```text
 ghcr.io/<owner>/<repo>:v0.3.0
