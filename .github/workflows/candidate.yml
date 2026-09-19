@@ -78,9 +78,56 @@ jobs:
             type=gha,scope=unified
           cache-to: type=gha,mode=max,scope=sovereign-${{ matrix.arch }}-main
 
-  manifest:
+  arm64-smoke:
     if: github.event.workflow_run.conclusion == 'success'
     needs: build
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare ARM64 runtime test environment
+        shell: bash
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:candidate-arm64"
+          cp .env.example .env
+          sed -i "s#^SOVEREIGN_IMAGE=.*#SOVEREIGN_IMAGE=$image#" .env
+          sed -i 's/^PLANET_IP_ADDR4=.*/PLANET_IP_ADDR4=127.0.0.1/' .env
+          sed -i 's/^ZTNET_AUTH_SECRET=.*/ZTNET_AUTH_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/' .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=arm64-ci-only-password/' .env
+          sed -i 's#^ZTNET_URL=.*#ZTNET_URL=http://127.0.0.1:3000#' .env
+          rm -rf data
+          mkdir -p data/planet/{one,world,dist,config} data/controller/one data/postgres
+
+      - name: Pull and start native ARM64 stack
+        run: |
+          docker compose pull postgres sovereign
+          docker compose up -d --no-build
+
+      - name: ARM64 integration smoke test
+        run: ./tests/integration/smoke.sh
+
+      - name: ARM64 restart persistence test
+        run: ./tests/integration/restart-persistence.sh
+
+      - name: ARM64 logs on failure
+        if: failure()
+        run: docker compose ps && docker compose logs --no-color --tail=400 || true
+
+      - name: ARM64 cleanup
+        if: always()
+        run: docker compose down -v || true
+
+  manifest:
+    if: github.event.workflow_run.conclusion == 'success'
+    needs: [build, arm64-smoke]
     runs-on: ubuntu-24.04
     steps:
       - uses: docker/setup-buildx-action@v3
