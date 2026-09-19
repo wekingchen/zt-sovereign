@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+exec /opt/zerotier-controller/zerotier-one -p"${CONTROLLER_ZT_PORT:-9993}" "${CONTROLLER_HOME:-/data/controller/one}"

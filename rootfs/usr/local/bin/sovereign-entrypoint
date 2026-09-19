@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+PLANET_HOME=${PLANET_HOME:-/data/planet/one}
+WORLD_DIR=${WORLD_DIR:-/data/planet/world}
+DIST_DIR=${DIST_DIR:-/data/planet/dist}
+CONFIG_DIR=${CONFIG_DIR:-/data/planet/config}
+CONTROLLER_HOME=${CONTROLLER_HOME:-/data/controller/one}
+
+mkdir -p "$PLANET_HOME" "$WORLD_DIR" "$DIST_DIR" "$CONFIG_DIR" "$CONTROLLER_HOME"
+chmod 700 "$PLANET_HOME" "$WORLD_DIR" "$CONFIG_DIR" "$CONTROLLER_HOME" 2>/dev/null || true
+
+# ZTNet expects the standard ZeroTier home. Keep it as a stable symlink to the
+# Controller state; PLANET state remains completely separate under /data/planet.
+if [[ -e /var/lib/zerotier-one && ! -L /var/lib/zerotier-one ]]; then
+  if [[ -n "$(find /var/lib/zerotier-one -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]; then
+    echo >&2 "FATAL: /var/lib/zerotier-one is a non-empty directory; refusing to replace it with Controller symlink."
+    exit 20
+  fi
+  rmdir /var/lib/zerotier-one
+fi
+ln -sfn "$CONTROLLER_HOME" /var/lib/zerotier-one
+
+# Generate or validate the sovereign root before either ZeroTier daemon starts.
+planetctl ensure
+
+if [[ ! -s "$DIST_DIR/planet" ]]; then
+  echo >&2 "FATAL: custom PLANET was not generated."
+  exit 21
+fi
+install -m 600 "$DIST_DIR/planet" "$CONTROLLER_HOME/planet"
+
+# ZTNet is in the same container, so Controller management never needs to be
+# exposed to another container/network. Keep management loopback-only.
+cat > "$CONTROLLER_HOME/local.conf" <<'JSON'
+{
+  "settings": {
+    "allowManagementFrom": ["127.0.0.1/32", "::1/128"]
+  }
+}
+JSON
+chmod 600 "$CONTROLLER_HOME/local.conf"
+
+# Fail early for the secrets ZTNet needs. POSTGRES_* are consumed by init-db.sh.
+: "${POSTGRES_HOST:?POSTGRES_HOST is required}"
+: "${POSTGRES_PORT:=5432}"
+: "${POSTGRES_DB:?POSTGRES_DB is required}"
+: "${POSTGRES_USER:?POSTGRES_USER is required}"
+: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+: "${NEXTAUTH_URL:?NEXTAUTH_URL is required}"
+: "${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required}"
+
+exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/sovereign.conf

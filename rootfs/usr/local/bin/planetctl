@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ZT_HOME=${PLANET_HOME:-/data/planet/one}
+WORLD_DIR=${WORLD_DIR:-/data/planet/world}
+DIST_DIR=${DIST_DIR:-/data/planet/dist}
+CONFIG_DIR=${CONFIG_DIR:-/data/planet/config}
+ZT_PORT=${PLANET_ZT_PORT:-9994}
+ZT_IDTOOL=${PLANET_ZT_IDTOOL:-/opt/zerotier-planet/zerotier-idtool}
+MKWORLD=${PLANET_MKWORLD:-/opt/zerotier-planet/mkworld}
+
+mkdir -p "$ZT_HOME" "$WORLD_DIR" "$DIST_DIR" "$CONFIG_DIR"
+
+usage() {
+  cat <<'TXT'
+Usage: planetctl <command>
+
+Commands:
+  ensure       Initialize once if no planet exists; otherwise validate state only.
+  init         Create identity, moon and planet. Refuses if planet already exists.
+  regenerate   Rebuild moon/planet with the SAME identity and signing keys.
+  info         Show node ID, endpoints, world timestamp and generated files.
+
+Environment:
+  PLANET_IP_ADDR4, PLANET_IP_ADDR6   Static reachable addresses (at least one required)
+  PLANET_ZT_PORT                     Root service port (default 9994)
+  PLANET_WORLD_TIMESTAMP             Optional explicit world timestamp in milliseconds
+TXT
+}
+
+require_endpoints() {
+  if [[ -z "${PLANET_IP_ADDR4:-}" && -z "${PLANET_IP_ADDR6:-}" ]]; then
+    echo >&2 "ERROR: set PLANET_IP_ADDR4 and/or PLANET_IP_ADDR6 to a static address reachable by clients."
+    exit 2
+  fi
+}
+
+node_id() {
+  if [[ -s "$ZT_HOME/identity.public" ]]; then
+    cut -d: -f1 < "$ZT_HOME/identity.public"
+  fi
+}
+
+choose_timestamp() {
+  local now prev requested ts
+  now=$(date +%s%3N)
+  prev=0
+  [[ -s "$WORLD_DIR/timestamp" ]] && prev=$(tr -cd '0-9' < "$WORLD_DIR/timestamp")
+  requested=$(printf '%s' "${PLANET_WORLD_TIMESTAMP:-}" | tr -cd '0-9')
+  if [[ -n "$requested" ]]; then ts=$requested; else ts=$now; fi
+  if (( ts <= prev )); then ts=$((prev + 1)); fi
+  printf '%s\n' "$ts"
+}
+
+write_moon_json() {
+  local endpoints_file="$WORLD_DIR/endpoints.json"
+  python3 - "$WORLD_DIR/moon.json" "$endpoints_file" "${PLANET_IP_ADDR4:-}" "${PLANET_IP_ADDR6:-}" "$ZT_PORT" <<'PY'
+import json, sys
+moon_path, endpoints_path, ip4, ip6, port = sys.argv[1:]
+with open(moon_path, 'r', encoding='utf-8') as f:
+    data = json.load(f)
+endpoints=[]
+if ip4:
+    endpoints.append(f"{ip4}/{port}")
+if ip6:
+    endpoints.append(f"{ip6}/{port}")
+if not data.get('roots'):
+    raise SystemExit('moon.json contains no roots')
+data['roots'][0]['stableEndpoints']=endpoints
+with open(moon_path, 'w', encoding='utf-8') as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+with open(endpoints_path, 'w', encoding='utf-8') as f:
+    json.dump(endpoints, f, indent=2)
+PY
+}
+
+generate_artifacts() {
+  require_endpoints
+
+  if [[ ! -s "$ZT_HOME/identity.secret" || ! -s "$ZT_HOME/identity.public" ]]; then
+    echo "Generating persistent ZeroTier root identity..."
+    "$ZT_IDTOOL" generate "$ZT_HOME/identity.secret" "$ZT_HOME/identity.public"
+    chmod 600 "$ZT_HOME/identity.secret"
+  fi
+
+  echo "Generating moon metadata from persistent identity..."
+  "$ZT_IDTOOL" initmoon "$ZT_HOME/identity.public" > "$WORLD_DIR/moon.json"
+  write_moon_json
+
+  rm -f "$WORLD_DIR"/*.moon
+  (
+    cd "$WORLD_DIR"
+    "$ZT_IDTOOL" genmoon moon.json
+  )
+
+  local ts
+  ts=$(choose_timestamp)
+  echo "Generating signed PLANET world, timestamp=$ts ..."
+  (
+    cd "$WORLD_DIR"
+    "$MKWORLD" --timestamp "$ts"
+  )
+
+  install -m 0644 "$WORLD_DIR/world.bin" "$DIST_DIR/planet"
+  cp -f "$WORLD_DIR"/*.moon "$DIST_DIR/"
+  install -m 0644 "$DIST_DIR/planet" "$ZT_HOME/planet"
+  printf '%s\n' "$ts" > "$WORLD_DIR/timestamp"
+  printf '%s\n' "${PLANET_IP_ADDR4:-}" > "$CONFIG_DIR/ip_addr4"
+  printf '%s\n' "${PLANET_IP_ADDR6:-}" > "$CONFIG_DIR/ip_addr6"
+  printf '%s\n' "$ZT_PORT" > "$CONFIG_DIR/zerotier-one.port"
+
+  echo "PLANET generated successfully."
+  info
+}
+
+init() {
+  if [[ -s "$DIST_DIR/planet" || -s "$WORLD_DIR/world.bin" ]]; then
+    echo >&2 "ERROR: planet already exists. Use 'planetctl regenerate' deliberately if you need a new signed world."
+    exit 3
+  fi
+  generate_artifacts
+}
+
+ensure() {
+  if [[ ! -s "$DIST_DIR/planet" ]]; then
+    init
+    return
+  fi
+  if [[ ! -s "$ZT_HOME/identity.secret" || ! -s "$WORLD_DIR/previous.c25519" || ! -s "$WORLD_DIR/current.c25519" ]]; then
+    echo >&2 "FATAL: planet exists but persistent identity/world signing keys are missing. Restore backup; do NOT regenerate blindly."
+    exit 4
+  fi
+  install -m 0644 "$DIST_DIR/planet" "$ZT_HOME/planet"
+  echo "Existing PLANET state found; reusing persistent identity and signing keys."
+  info
+}
+
+regenerate() {
+  if [[ ! -s "$ZT_HOME/identity.secret" ]]; then
+    echo >&2 "ERROR: no existing root identity. Use 'planetctl init' first."
+    exit 5
+  fi
+  if [[ ! -s "$WORLD_DIR/previous.c25519" || ! -s "$WORLD_DIR/current.c25519" ]]; then
+    echo >&2 "ERROR: world signing keys are missing. Restore them from backup instead of creating a different world."
+    exit 6
+  fi
+  generate_artifacts
+}
+
+info() {
+  echo "root_node_id=$(node_id)"
+  echo "zt_port=$ZT_PORT"
+  [[ -s "$WORLD_DIR/endpoints.json" ]] && printf 'endpoints=' && tr -d '\n' < "$WORLD_DIR/endpoints.json" && echo
+  [[ -s "$WORLD_DIR/timestamp" ]] && echo "world_timestamp=$(cat "$WORLD_DIR/timestamp")"
+  [[ -s "$DIST_DIR/planet" ]] && echo "planet_sha256=$(sha256sum "$DIST_DIR/planet" | awk '{print $1}')"
+  for f in "$DIST_DIR"/*.moon; do
+    [[ -e "$f" ]] && echo "moon_file=$(basename "$f")"
+  done
+}
+
+case "${1:-}" in
+  ensure) ensure ;;
+  init) init ;;
+  regenerate) regenerate ;;
+  info) info ;;
+  -h|--help|help|'') usage ;;
+  *) echo >&2 "Unknown command: $1"; usage >&2; exit 64 ;;
+esac

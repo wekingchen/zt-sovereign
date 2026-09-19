@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SHARE=/usr/local/share/zerotier-sovereign
+CONTROLLER_HOME=${CONTROLLER_HOME:-/data/controller/one}
+CONTROLLER_ZT_PORT=${CONTROLLER_ZT_PORT:-9993}
+
+readf() { [[ -s "$1" ]] && tr -d '\r\n' < "$1" || printf 'unknown'; }
+
+version() {
+  cat <<TXT
+ZeroTier Sovereign $(readf "$SHARE/version")
+
+PLANET ZeroTier:
+  version: $(readf "$SHARE/planet-zerotier-version")
+  commit:  $(readf "$SHARE/planet-zerotier-commit")
+
+Controller ZeroTier:
+  version: $(readf "$SHARE/controller-zerotier-version")
+  commit:  $(readf "$SHARE/controller-zerotier-commit")
+
+ZTNet:
+  ref:     $(readf "$SHARE/ztnet-ref")
+  commit:  $(readf "$SHARE/ztnet-commit")
+
+Architecture:
+  $(uname -s)/$(uname -m)
+TXT
+}
+
+controller_status() {
+  if [[ ! -s "$CONTROLLER_HOME/authtoken.secret" ]]; then
+    echo >&2 "Controller token not ready"
+    return 1
+  fi
+  local token
+  token=$(<"$CONTROLLER_HOME/authtoken.secret")
+  curl -fsS -H "X-ZT1-Auth: $token" "http://127.0.0.1:${CONTROLLER_ZT_PORT}/status"
+  echo
+}
+
+status() {
+  supervisorctl -c /etc/supervisor/conf.d/sovereign.conf status || true
+  echo
+  echo "--- PLANET ---"
+  planetctl info || true
+  echo
+  echo "--- Controller ---"
+  controller_status || true
+  echo
+  echo "--- ZTNet ---"
+  curl -fsS -o /dev/null -w 'HTTP %{http_code}\n' http://127.0.0.1:3000/ || true
+}
+
+case "${1:-}" in
+  version) version ;;
+  status) status ;;
+  health) sovereign-healthcheck && echo OK ;;
+  planet) shift; exec planetctl "$@" ;;
+  controller-status) controller_status ;;
+  *)
+    cat <<'TXT'
+Usage: sovereignctl <command>
+
+Commands:
+  version             Show embedded component versions and source commits.
+  status              Show supervisor, PLANET, Controller and ZTNet status.
+  health              Run the container health checks now.
+  planet <command>    Pass through to planetctl.
+  controller-status   Query the local Controller service API.
+TXT
+    ;;
+esac
