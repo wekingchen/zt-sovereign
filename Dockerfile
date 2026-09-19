@@ -111,7 +111,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     WORLD_DIR=/data/planet/world \
     DIST_DIR=/data/planet/dist \
     CONFIG_DIR=/data/planet/config \
-    CONTROLLER_HOME=/data/controller/one
+    CONTROLLER_HOME=/data/controller/one \
+    PATH=/app/node_modules/.bin:${PATH}
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -134,8 +135,9 @@ RUN set -eux; \
     prisma_client_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/@prisma/client']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
     cuid2_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/@paralleldrive/cuid2']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
     tsnode_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/ts-node']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
+    tsx_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/tsx']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
     dotenv_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/dotenv']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
-    npm install --no-save "prisma@${prisma_version}" "@prisma/client@${prisma_client_version}" "@paralleldrive/cuid2@${cuid2_version}" "dotenv@${dotenv_version}" "ts-node@${tsnode_version}"; \
+    npm install --no-save "prisma@${prisma_version}" "@prisma/client@${prisma_client_version}" "@paralleldrive/cuid2@${cuid2_version}" "dotenv@${dotenv_version}" "ts-node@${tsnode_version}" "tsx@${tsx_version}"; \
     rm -f /tmp/ztnet-package-lock.json package.json package-lock.json
 
 COPY --from=ztnet_builder /app/next.config.mjs ./
