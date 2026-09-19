@@ -46,7 +46,7 @@ docker compose exec -T sovereign curl -fsS \
   -H "X-ZT1-Auth: $token" \
   -X DELETE "http://127.0.0.1:9993/controller/network/$nwid" >/dev/null
 
-curl -fsS http://127.0.0.1:${ZTNET_PORT:-3000}/ >/dev/null
+curl -fsS "http://127.0.0.1:${ZTNET_PORT:-3000}/" >/dev/null
 
 # Prisma migrations must have been applied to PostgreSQL.
 docker compose exec -T postgres psql -U "${POSTGRES_USER:-ztnet}" -d "${POSTGRES_DB:-ztnet}" -Atqc \

@@ -39,6 +39,6 @@ probe=$(docker compose exec -T postgres psql -U "${POSTGRES_USER:-ztnet}" -d "${
 test "$probe" = persist-me
 [[ "$before" =~ ^[0-9]+$ && "$after" =~ ^[0-9]+$ ]]
 (( after >= before ))
-curl -fsS http://127.0.0.1:${ZTNET_PORT:-3000}/ >/dev/null
+curl -fsS "http://127.0.0.1:${ZTNET_PORT:-3000}/" >/dev/null
 
 echo "PASS upgrade smoke: migrations $before -> $after"
