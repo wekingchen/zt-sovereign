@@ -1,0 +1,46 @@
+name: Bootstrap v0.3.0 Tag
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bootstrap-v0.3.0.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create verified v0.3.0 tag
+        shell: bash
+        env:
+          TARGET_SHA: 66d0becf1ae4de2c9691f7cf1ac36a95bdf0c32f
+          RELEASE_TAG: v0.3.0
+        run: |
+          set -euo pipefail
+
+          git fetch origin --tags --force
+
+          actual=$(git rev-parse "$TARGET_SHA^{commit}")
+          [[ "$actual" == "$TARGET_SHA" ]] || {
+            echo "Target commit mismatch: expected $TARGET_SHA, got $actual" >&2
+            exit 1
+          }
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "$RELEASE_TAG already exists; leaving it unchanged."
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$RELEASE_TAG" "$TARGET_SHA" -m "ZT Sovereign $RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"
+
+          echo "Created $RELEASE_TAG -> $TARGET_SHA"
