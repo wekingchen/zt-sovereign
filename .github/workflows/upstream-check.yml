@@ -1,0 +1,146 @@
+name: Upstream Check
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily. Detection is cheap; candidate CI only runs when a PR is actually updated.
+    - cron: '17 2 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect newest official releases and immutable commits
+        id: upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -a; source versions.env; set +a
+
+          resolve_tag_commit() {
+            local repo=$1 tag=$2 data type sha
+            data=$(gh api "repos/${repo}/git/ref/tags/${tag}")
+            type=$(jq -r '.object.type' <<<"$data")
+            sha=$(jq -r '.object.sha' <<<"$data")
+            while [[ "$type" == tag ]]; do
+              data=$(gh api "repos/${repo}/git/tags/${sha}")
+              type=$(jq -r '.object.type' <<<"$data")
+              sha=$(jq -r '.object.sha' <<<"$data")
+            done
+            printf '%s\n' "$sha"
+          }
+
+          zt_tag=$(gh api repos/zerotier/ZeroTierOne/releases/latest --jq .tag_name)
+          zt_sha=$(resolve_tag_commit zerotier/ZeroTierOne "$zt_tag")
+          controller_sha=$(resolve_tag_commit zerotier/ZeroTierOne "$CONTROLLER_ZEROTIER_VERSION")
+          ztnet_tag=$(gh api repos/sinamics/ztnet/releases/latest --jq .tag_name)
+          ztnet_sha=$(resolve_tag_commit sinamics/ztnet "$ztnet_tag")
+
+          gh api "repos/sinamics/ztnet/contents/Dockerfile?ref=${ztnet_tag}" --jq .content \
+            | tr -d '\n' | base64 -d > /tmp/ztnet.Dockerfile
+          node_image=$(sed -n 's/^ARG NODEJS_IMAGE=//p' /tmp/ztnet.Dockerfile | head -1)
+          [[ -n "$node_image" ]] || node_image="$ZTNET_NODE_IMAGE"
+
+          {
+            echo "zt_tag=$zt_tag"
+            echo "zt_sha=$zt_sha"
+            echo "controller_sha=$controller_sha"
+            echo "ztnet_tag=$ztnet_tag"
+            echo "ztnet_sha=$ztnet_sha"
+            echo "node_image=$node_image"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update candidate pins
+        id: update
+        shell: bash
+        env:
+          ZT_TAG: ${{ steps.upstream.outputs.zt_tag }}
+          ZT_SHA: ${{ steps.upstream.outputs.zt_sha }}
+          CONTROLLER_SHA: ${{ steps.upstream.outputs.controller_sha }}
+          ZTNET_TAG: ${{ steps.upstream.outputs.ztnet_tag }}
+          ZTNET_SHA: ${{ steps.upstream.outputs.ztnet_sha }}
+          NODE_IMAGE: ${{ steps.upstream.outputs.node_image }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, re
+
+          p = Path('versions.env')
+          text = p.read_text()
+          vals = {}
+          for line in text.splitlines():
+              if '=' in line and not line.lstrip().startswith('#'):
+                  k, v = line.split('=', 1)
+                  vals[k] = v
+
+          def is_sha(v: str) -> bool:
+              return bool(re.fullmatch(r'[0-9a-fA-F]{40}', v or ''))
+
+          # If an already-pinned release tag silently moves, do NOT trust it.
+          if vals.get('PLANET_ZEROTIER_VERSION') == os.environ['ZT_TAG'] and is_sha(vals.get('PLANET_ZEROTIER_SOURCE_REF', '')):
+              if vals['PLANET_ZEROTIER_SOURCE_REF'].lower() != os.environ['ZT_SHA'].lower():
+                  raise SystemExit('SECURITY: ZeroTier release tag moved after it was pinned; manual review required')
+          if vals.get('CONTROLLER_ZEROTIER_VERSION') and is_sha(vals.get('CONTROLLER_ZEROTIER_SOURCE_REF', '')):
+              if vals['CONTROLLER_ZEROTIER_SOURCE_REF'].lower() != os.environ['CONTROLLER_SHA'].lower():
+                  raise SystemExit('SECURITY: pinned Controller compatibility tag moved; manual review required')
+          if vals.get('ZTNET_VERSION') == os.environ['ZTNET_TAG'] and is_sha(vals.get('ZTNET_SOURCE_REF', '')):
+              if vals['ZTNET_SOURCE_REF'].lower() != os.environ['ZTNET_SHA'].lower():
+                  raise SystemExit('SECURITY: ZTNet release tag moved after it was pinned; manual review required')
+
+          updates = {
+              'PLANET_ZEROTIER_VERSION': os.environ['ZT_TAG'],
+              'PLANET_ZEROTIER_SOURCE_REF': os.environ['ZT_SHA'],
+              # Controller version is intentionally NOT auto-upgraded; only pin its current tag to a commit.
+              'CONTROLLER_ZEROTIER_SOURCE_REF': os.environ['CONTROLLER_SHA'],
+              'ZTNET_VERSION': os.environ['ZTNET_TAG'],
+              'ZTNET_SOURCE_REF': os.environ['ZTNET_SHA'],
+              'ZTNET_NODE_IMAGE': os.environ['NODE_IMAGE'],
+          }
+          lines = text.splitlines()
+          for i, line in enumerate(lines):
+              if '=' not in line or line.lstrip().startswith('#'):
+                  continue
+              key = line.split('=', 1)[0]
+              if key in updates:
+                  lines[i] = f'{key}={updates[key]}'
+          p.write_text('\n'.join(lines) + '\n')
+          PY
+          ./scripts/sync-version-files.sh
+          if git diff --quiet -- versions.env .env.example; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or refresh candidate upgrade PR
+        if: steps.update.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=automation/upstream-refresh
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B "$branch"
+          git add versions.env .env.example
+          git commit -m 'chore: refresh upstream candidate versions'
+          git push --force origin "HEAD:$branch"
+          if ! gh pr list --head "$branch" --state open --json number --jq '.[0].number' | grep -q '[0-9]'; then
+            gh pr create \
+              --head "$branch" \
+              --base main \
+              --title 'chore: validate newest upstream releases' \
+              --body $'Automated candidate update.\n\nCI, integration tests, persistence tests and upgrade tests must pass before merge. The standalone Controller compatibility version is intentionally not auto-upgraded.'
+          fi

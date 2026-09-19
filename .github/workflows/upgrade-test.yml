@@ -1,0 +1,77 @@
+name: Upgrade Test
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  persistent-upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Prepare base worktree
+        shell: bash
+        run: |
+          git fetch origin "${{ github.base_ref }}"
+          git worktree add /tmp/sovereign-base "origin/${{ github.base_ref }}"
+          if [[ ! -f /tmp/sovereign-base/Dockerfile || ! -f /tmp/sovereign-base/versions.env ]]; then
+            echo "BASE_UNIFIED=false" >> "$GITHUB_ENV"
+            echo "Base branch predates the unified v0.3 image; upgrade test will be skipped."
+          else
+            echo "BASE_UNIFIED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build base image
+        if: env.BASE_UNIFIED == 'true'
+        shell: bash
+        run: |
+          cd /tmp/sovereign-base
+          set -a; source versions.env; set +a
+          docker build \
+            --build-arg "SOVEREIGN_VERSION=$SOVEREIGN_VERSION" \
+            --build-arg "PLANET_ZEROTIER_VERSION=$PLANET_ZEROTIER_VERSION" \
+            --build-arg "PLANET_ZEROTIER_SOURCE_REF=$PLANET_ZEROTIER_SOURCE_REF" \
+            --build-arg "CONTROLLER_ZEROTIER_VERSION=$CONTROLLER_ZEROTIER_VERSION" \
+            --build-arg "CONTROLLER_ZEROTIER_SOURCE_REF=$CONTROLLER_ZEROTIER_SOURCE_REF" \
+            --build-arg "ZTNET_VERSION=$ZTNET_VERSION" \
+            --build-arg "ZTNET_SOURCE_REF=$ZTNET_SOURCE_REF" \
+            --build-arg "NEXT_PUBLIC_APP_VERSION=$ZTNET_VERSION" \
+            --build-arg "NODEJS_IMAGE=$ZTNET_NODE_IMAGE" \
+            -t zerotier-sovereign:upgrade-old .
+
+      - name: Build candidate image
+        if: env.BASE_UNIFIED == 'true'
+        shell: bash
+        run: |
+          SOVEREIGN_IMAGE=zerotier-sovereign:upgrade-new ./scripts/build-local.sh
+
+      - name: Prepare upgrade environment
+        if: env.BASE_UNIFIED == 'true'
+        shell: bash
+        run: |
+          cp .env.example .env
+          sed -i 's/^PLANET_IP_ADDR4=.*/PLANET_IP_ADDR4=127.0.0.1/' .env
+          sed -i 's/^ZTNET_AUTH_SECRET=.*/ZTNET_AUTH_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/' .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=upgrade-ci-only-password/' .env
+          sed -i 's#^ZTNET_URL=.*#ZTNET_URL=http://127.0.0.1:3000#' .env
+
+      - name: Reuse DB and state across image upgrade
+        if: env.BASE_UNIFIED == 'true'
+        env:
+          CI: "true"
+          OLD_IMAGE: zerotier-sovereign:upgrade-old
+          NEW_IMAGE: zerotier-sovereign:upgrade-new
+        run: ./tests/upgrade/ztnet-upgrade.sh
+
+      - name: Logs on failure
+        if: failure() && env.BASE_UNIFIED == 'true'
+        run: docker compose ps && docker compose logs --no-color --tail=400 || true
+      - name: Cleanup
+        if: always() && env.BASE_UNIFIED == 'true'
+        run: docker compose down -v || true
