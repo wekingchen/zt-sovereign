@@ -10,7 +10,7 @@ ARG PLANET_ZEROTIER_VERSION=1.16.2
 ARG PLANET_ZEROTIER_SOURCE_REF=1.16.2
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential ca-certificates curl git pkg-config libssl-dev nlohmann-json3-dev \
+    build-essential ca-certificates curl git pkg-config libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
 ENV PATH=/root/.cargo/bin:${PATH}
@@ -22,10 +22,6 @@ RUN git init . \
     && git rev-parse HEAD > /tmp/planet-zerotier-commit
 # Do not enable ZT_NONFREE / ZT_CONTROLLER here.
 RUN make -j"$(nproc)"
-COPY planet/mkworld_custom.cpp /tmp/mkworld_custom.cpp
-RUN cp /tmp/mkworld_custom.cpp attic/world/mkworld.cpp \
-    && cd attic/world \
-    && ./build.sh
 
 # -----------------------------------------------------------------------------
 # Controller: compatibility branch that still contains the standalone controller.
@@ -158,7 +154,6 @@ RUN sed -i 's#npx prisma#/app/node_modules/.bin/prisma#g' /app/init-db.sh \
 # Keep the two ZeroTier installations physically separate inside the same image.
 RUN mkdir -p /opt/zerotier-planet /opt/zerotier-controller /usr/local/share/zerotier-sovereign
 COPY --from=planet_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-planet/zerotier-one
-COPY --from=planet_builder /src/ZeroTierOne/attic/world/mkworld /opt/zerotier-planet/mkworld
 COPY --from=planet_builder /tmp/planet-zerotier-commit /usr/local/share/zerotier-sovereign/planet-zerotier-commit
 COPY --from=controller_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-controller/zerotier-one
 COPY --from=controller_builder /tmp/controller-zerotier-commit /usr/local/share/zerotier-sovereign/controller-zerotier-commit
