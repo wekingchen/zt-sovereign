@@ -139,8 +139,7 @@ RUN set -eux; \
     cuid2_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/@paralleldrive/cuid2']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
     tsnode_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/ts-node']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
     dotenv_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/dotenv']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
-    npm install --no-save "@prisma/client@${prisma_client_version}" "@paralleldrive/cuid2@${cuid2_version}" "dotenv@${dotenv_version}"; \
-    npm install -g "prisma@${prisma_version}" "ts-node@${tsnode_version}"; \
+    npm install --no-save "prisma@${prisma_version}" "@prisma/client@${prisma_client_version}" "@paralleldrive/cuid2@${cuid2_version}" "dotenv@${dotenv_version}" "ts-node@${tsnode_version}"; \
     rm -f /tmp/ztnet-package-lock.json package.json package-lock.json
 
 COPY --from=ztnet_builder /app/next.config.mjs ./
@@ -151,10 +150,10 @@ COPY --from=ztnet_builder --chown=1001:1001 /app/.next/static ./.next/static
 COPY --from=ztnet_builder --chown=1001:1001 /app/prisma ./prisma
 COPY --from=ztnet_builder --chown=1001:1001 /app/init-db.sh ./init-db.sh
 COPY --from=ztmkworld_builder /usr/local/bin/ztmkworld /usr/local/bin/ztmkworld
-RUN sed -i 's/npx prisma/prisma/g' /app/init-db.sh \
+RUN sed -i 's#npx prisma#/app/node_modules/.bin/prisma#g' /app/init-db.sh \
     && chmod +x /app/init-db.sh \
     && touch /app/.env \
-    && prisma generate
+    && /app/node_modules/.bin/prisma generate
 
 # Keep the two ZeroTier installations physically separate inside the same image.
 RUN mkdir -p /opt/zerotier-planet /opt/zerotier-controller /usr/local/share/zerotier-sovereign
