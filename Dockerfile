@@ -138,7 +138,8 @@ RUN set -eux; \
     prisma_client_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/@prisma/client']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
     cuid2_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/@paralleldrive/cuid2']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
     tsnode_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/ts-node']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
-    npm install --no-save "@prisma/client@${prisma_client_version}" "@paralleldrive/cuid2@${cuid2_version}"; \
+    dotenv_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/dotenv']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
+    npm install --no-save "@prisma/client@${prisma_client_version}" "@paralleldrive/cuid2@${cuid2_version}" "dotenv@${dotenv_version}"; \
     npm install -g "prisma@${prisma_version}" "ts-node@${tsnode_version}"; \
     rm -f /tmp/ztnet-package-lock.json package.json package-lock.json
 
