@@ -31,10 +31,25 @@ jobs:
 
   integration:
     needs: lint-unit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+
       - uses: docker/setup-buildx-action@v3
+
+      - name: Load build pins and choose cache scope
+        shell: bash
+        run: |
+          set -a; source versions.env; set +a
+          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF ZTNET_VERSION ZTNET_SOURCE_REF ZTNET_NODE_IMAGE; do
+            echo "$v=${!v}" >> "$GITHUB_ENV"
+          done
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "BUILD_CACHE_SCOPE=sovereign-amd64-main" >> "$GITHUB_ENV"
+          else
+            echo "BUILD_CACHE_SCOPE=sovereign-amd64-pr-${{ github.event.pull_request.number }}" >> "$GITHUB_ENV"
+          fi
+
       - name: Prepare CI environment
         shell: bash
         run: |
@@ -43,17 +58,44 @@ jobs:
           sed -i 's/^ZTNET_AUTH_SECRET=.*/ZTNET_AUTH_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/' .env
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-password-do-not-use/' .env
           sed -i 's#^ZTNET_URL=.*#ZTNET_URL=http://127.0.0.1:3000#' .env
-      - name: Build unified image from source
-        run: ./scripts/build-local.sh
+
+      - name: Build amd64 image with persistent BuildKit cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          load: true
+          provenance: false
+          tags: zerotier-sovereign:local
+          build-args: |
+            SOVEREIGN_VERSION=${{ env.SOVEREIGN_VERSION }}
+            PLANET_ZEROTIER_VERSION=${{ env.PLANET_ZEROTIER_VERSION }}
+            PLANET_ZEROTIER_SOURCE_REF=${{ env.PLANET_ZEROTIER_SOURCE_REF }}
+            CONTROLLER_ZEROTIER_VERSION=${{ env.CONTROLLER_ZEROTIER_VERSION }}
+            CONTROLLER_ZEROTIER_SOURCE_REF=${{ env.CONTROLLER_ZEROTIER_SOURCE_REF }}
+            ZTNET_VERSION=${{ env.ZTNET_VERSION }}
+            ZTNET_SOURCE_REF=${{ env.ZTNET_SOURCE_REF }}
+            NEXT_PUBLIC_APP_VERSION=${{ env.ZTNET_VERSION }}
+            NODEJS_IMAGE=${{ env.ZTNET_NODE_IMAGE }}
+          cache-from: |
+            type=gha,scope=sovereign-amd64-main
+            type=gha,scope=unified
+          cache-to: type=gha,mode=max,scope=${{ env.BUILD_CACHE_SCOPE }}
+
       - name: Start stack
         run: docker compose up -d --no-build
+
       - name: Integration smoke test
         run: ./tests/integration/smoke.sh
+
       - name: Restart persistence test
         run: ./tests/integration/restart-persistence.sh
+
       - name: Logs on failure
         if: failure()
         run: docker compose ps && docker compose logs --no-color --tail=400 || true
+
       - name: Cleanup
         if: always()
         run: docker compose down -v || true

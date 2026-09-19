@@ -10,21 +10,37 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: publish-candidate-${{ github.repository }}
+  cancel-in-progress: true
+
 jobs:
-  publish:
+  build:
     if: github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-      - uses: docker/setup-qemu-action@v3
+
       - uses: docker/setup-buildx-action@v3
+
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Load pins and image name
         id: vars
         shell: bash
@@ -35,12 +51,13 @@ jobs:
           done
           echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
           echo "short_sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
-      - name: Build and push multi-arch candidate
+
+      - name: Build and push native ${{ matrix.arch }} candidate
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
           provenance: false
           build-args: |
@@ -54,7 +71,38 @@ jobs:
             NEXT_PUBLIC_APP_VERSION=${{ env.ZTNET_VERSION }}
             NODEJS_IMAGE=${{ env.ZTNET_NODE_IMAGE }}
           tags: |
-            ${{ steps.vars.outputs.image }}:candidate
-            ${{ steps.vars.outputs.image }}:sha-${{ steps.vars.outputs.short_sha }}
-          cache-from: type=gha,scope=unified
-          cache-to: type=gha,mode=max,scope=unified
+            ${{ steps.vars.outputs.image }}:candidate-${{ matrix.arch }}
+            ${{ steps.vars.outputs.image }}:sha-${{ steps.vars.outputs.short_sha }}-${{ matrix.arch }}
+          cache-from: |
+            type=gha,scope=sovereign-${{ matrix.arch }}-main
+            type=gha,scope=unified
+          cache-to: type=gha,mode=max,scope=sovereign-${{ matrix.arch }}-main
+
+  manifest:
+    if: github.event.workflow_run.conclusion == 'success'
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge native images into multi-arch candidate
+        shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          short_sha="${HEAD_SHA:0:12}"
+
+          docker buildx imagetools create             --tag "$image:candidate"             "$image:candidate-amd64"             "$image:candidate-arm64"
+
+          docker buildx imagetools create             --tag "$image:sha-$short_sha"             "$image:sha-$short_sha-amd64"             "$image:sha-$short_sha-arm64"
+
+          docker buildx imagetools inspect "$image:candidate"
+          docker buildx imagetools inspect "$image:sha-$short_sha"

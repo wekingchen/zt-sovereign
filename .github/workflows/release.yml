@@ -8,13 +8,24 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  verify-and-publish:
-    runs-on: ubuntu-latest
+  verify:
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
+
       - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Validate release tag and prepare environment
         id: vars
         shell: bash
@@ -32,24 +43,45 @@ jobs:
           sed -i 's/^ZTNET_AUTH_SECRET=.*/ZTNET_AUTH_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/' .env
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=release-ci-only-password/' .env
           sed -i 's#^ZTNET_URL=.*#ZTNET_URL=http://127.0.0.1:3000#' .env
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Unit tests
         run: ./tests/unit/run.sh
-      - name: Build amd64 release candidate locally
-        run: ./scripts/build-local.sh
+
+      - name: Build cached amd64 verification image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          load: true
+          provenance: false
+          tags: zerotier-sovereign:local
+          build-args: |
+            SOVEREIGN_VERSION=${{ env.SOVEREIGN_VERSION }}
+            PLANET_ZEROTIER_VERSION=${{ env.PLANET_ZEROTIER_VERSION }}
+            PLANET_ZEROTIER_SOURCE_REF=${{ env.PLANET_ZEROTIER_SOURCE_REF }}
+            CONTROLLER_ZEROTIER_VERSION=${{ env.CONTROLLER_ZEROTIER_VERSION }}
+            CONTROLLER_ZEROTIER_SOURCE_REF=${{ env.CONTROLLER_ZEROTIER_SOURCE_REF }}
+            ZTNET_VERSION=${{ env.ZTNET_VERSION }}
+            ZTNET_SOURCE_REF=${{ env.ZTNET_SOURCE_REF }}
+            NEXT_PUBLIC_APP_VERSION=${{ env.ZTNET_VERSION }}
+            NODEJS_IMAGE=${{ env.ZTNET_NODE_IMAGE }}
+          cache-from: |
+            type=gha,scope=sovereign-amd64-main
+            type=gha,scope=unified
+          cache-to: type=gha,mode=max,scope=sovereign-amd64-main
+
       - name: Integrated release smoke test
         shell: bash
         run: |
           docker compose up -d --no-build
           ./tests/integration/smoke.sh
           ./tests/integration/restart-persistence.sh
+
       - name: Stop local verification stack
         if: always()
         run: docker compose down -v || true
+
       - name: Upgrade test from current stable when available
         shell: bash
         env:
@@ -64,12 +96,48 @@ jobs:
           else
             echo "No existing stable image; first-release upgrade test skipped."
           fi
-      - name: Build and push immutable release
+
+  build:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Load build pins
+        id: vars
+        shell: bash
+        run: |
+          set -a; source versions.env; set +a
+          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF ZTNET_VERSION ZTNET_SOURCE_REF ZTNET_NODE_IMAGE; do
+            echo "$v=${!v}" >> "$GITHUB_ENV"
+          done
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push native ${{ matrix.arch }} release image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
           provenance: false
           build-args: |
@@ -83,7 +151,35 @@ jobs:
             NEXT_PUBLIC_APP_VERSION=${{ env.ZTNET_VERSION }}
             NODEJS_IMAGE=${{ env.ZTNET_NODE_IMAGE }}
           tags: |
-            ${{ steps.vars.outputs.image }}:${{ github.ref_name }}
-            ${{ steps.vars.outputs.image }}:sha-${{ steps.vars.outputs.short_sha }}
-          cache-from: type=gha,scope=unified
-          cache-to: type=gha,mode=max,scope=unified
+            ${{ steps.vars.outputs.image }}:${{ github.ref_name }}-${{ matrix.arch }}
+            ${{ steps.vars.outputs.image }}:sha-${{ steps.vars.outputs.short_sha }}-${{ matrix.arch }}
+          cache-from: |
+            type=gha,scope=sovereign-${{ matrix.arch }}-main
+            type=gha,scope=unified
+          cache-to: type=gha,mode=max,scope=sovereign-${{ matrix.arch }}-main
+
+  manifest:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge native release images into multi-arch manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          short_sha="${GITHUB_SHA::12}"
+
+          docker buildx imagetools create             --tag "$image:$GITHUB_REF_NAME"             "$image:$GITHUB_REF_NAME-amd64"             "$image:$GITHUB_REF_NAME-arm64"
+
+          docker buildx imagetools create             --tag "$image:sha-$short_sha"             "$image:sha-$short_sha-amd64"             "$image:sha-$short_sha-arm64"
+
+          docker buildx imagetools inspect "$image:$GITHUB_REF_NAME"
+          docker buildx imagetools inspect "$image:sha-$short_sha"
