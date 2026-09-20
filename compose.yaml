@@ -7,12 +7,13 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        SOVEREIGN_VERSION: ${SOVEREIGN_VERSION:-0.3.0}
+        SOVEREIGN_VERSION: ${SOVEREIGN_VERSION:-0.4.0}
         PLANET_ZEROTIER_VERSION: ${PLANET_ZEROTIER_VERSION:-1.16.2}
         PLANET_ZEROTIER_SOURCE_REF: ${PLANET_ZEROTIER_SOURCE_REF:-1.16.2}
         CONTROLLER_ZEROTIER_VERSION: ${CONTROLLER_ZEROTIER_VERSION:-1.14.2}
         CONTROLLER_ZEROTIER_SOURCE_REF: ${CONTROLLER_ZEROTIER_SOURCE_REF:-1.14.2}
-        NODEJS_IMAGE: ${ZTNET_NODE_IMAGE:-node:24-alpine3.24}
+        MKWORLD_SOURCE_REF: ${MKWORLD_SOURCE_REF:-3ba175a682d03edd72516d830667ee08fe3cf262}
+        NODEJS_IMAGE: ${NODEJS_IMAGE:-node:24-alpine3.24}
     container_name: zerotier-sovereign
     restart: unless-stopped
     environment:
@@ -45,4 +46,3 @@ services:
       - ./data/controller:/data/controller
       - ./data/ztncui:/data/ztncui
     stop_grace_period: 30s
-
