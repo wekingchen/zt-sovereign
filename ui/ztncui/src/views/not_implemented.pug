@@ -6,15 +6,16 @@
 extends network_layout
 
 block net_content
-  - if (member !== undefined)
-    h4 成员
-      a(href='../' + member.address)  #{member.address}
-  h4 尚未实现对
-    b  #{title}
-    |  的编辑。
-
-  h4
-    | 提示：部分属性可以在
-    strong
-      a(href='/controller/network/' + network.nwid + '#members') 成员
-    | 页面中修改。
+  .empty-state
+    span.glyphicon.glyphicon-wrench.empty-state-icon
+    h4 暂未提供此项编辑
+    p
+      | 当前页面尚未实现对
+      strong  #{title}
+      |  的直接编辑。
+    if member !== undefined
+      p
+        | 成员：
+        a.mono-link(href='../' + member.address) #{member.address}
+    p.muted 部分属性可以在网络成员列表中直接修改。
+    a.btn.btn-default(href='/controller/network/' + network.nwid + '#members') 返回成员列表
