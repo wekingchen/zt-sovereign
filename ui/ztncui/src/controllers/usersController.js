@@ -54,7 +54,8 @@ exports.users_list = async function(req, res) {
     const users = await get_users();
     res.render('users', { title: '管理员用户', navigate: navigate, message: '具有管理员权限的用户列表', users: users });
   } catch (err) {
-    res.render('users', { title: '管理员用户', navigate: navigate, message: '错误', users: null, error: '获取管理员用户列表失败：' + err });
+    console.error('获取管理员用户列表失败', err);
+    res.render('users', { title: '管理员用户', navigate: navigate, message: '错误', users: null, error: '获取管理员用户列表失败，详情请查看容器日志。' });
   }
 }
 
