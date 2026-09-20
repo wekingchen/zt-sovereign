@@ -105,12 +105,19 @@ jobs:
             echo
             echo '~~~text'
             docker run --rm --entrypoint /bin/bash zerotier-sovereign:local -lc '
-              du -sh /app /app/node_modules /app/.next /opt/zerotier-planet /opt/zerotier-controller /usr/lib/postgresql /usr/local/lib/node_modules 2>/dev/null || true
+              du -sh /app /app/node_modules /app/.next /opt/zerotier-planet /opt/zerotier-controller /usr/local/lib/node_modules 2>/dev/null || true
+              du -sh /usr/lib/postgresql* 2>/dev/null || true
               echo
-              dpkg-query -W -f="\${Installed-Size}\t\${Package}\n" 2>/dev/null | sort -nr | head -n 25
+              if command -v dpkg-query >/dev/null 2>&1; then
+                dpkg-query -W -f="\${Installed-Size}\t\${Package}\n" 2>/dev/null | sort -nr | head -n 25
+              elif command -v apk >/dev/null 2>&1; then
+                apk info -v | sort | head -n 50
+              fi
               echo
               echo "Prisma native engines:"
-              find /app -type f \( -name "libquery_engine*" -o -name "query-engine*" -o -name "schema-engine*" \) -printf "%s\t%p\n" 2>/dev/null | sort -nr || true
+              find /app -type f \( -name "libquery_engine*" -o -name "query-engine*" -o -name "schema-engine*" \) 2>/dev/null |
+                while IFS= read -r f; do stat -c "%s\t%n" "$f"; done |
+                sort -nr || true
             '
             echo '~~~'
           } | tee "$report"
