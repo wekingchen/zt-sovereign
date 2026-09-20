@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 curl -fsS "http://127.0.0.1:${PLANET_FILE_SERVER_PORT:-3001}/healthz" >/dev/null
 curl -fsS "http://127.0.0.1:3000/" >/dev/null
+curl -fsS "http://127.0.0.1:${ZTNCUI_PORT:-3002}/" >/dev/null
 
 home=${CONTROLLER_HOME:-/data/controller/one}
 [[ -s "$home/authtoken.secret" ]]
