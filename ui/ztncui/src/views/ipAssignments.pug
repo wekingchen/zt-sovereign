@@ -7,64 +7,67 @@ extends network_layout
 
 block net_content
   if errors
-    .row
-      .col-sm-12
-        .alert.alert-warning
-          b 请检查下方错误
+    .alert.alert-warning
+      strong 请检查下方错误
 
   form(method='POST' action='')
+    .info-list
+      .info-line
+        strong 成员名称
+        span= member.name
+      .info-line
+        strong ZeroTier 地址
+        span.mono-text= member.id
 
-    .row
-      .col-sm-6
-        h4 成员名称：
-          b= member.name
-      .col-sm-6.right
-        h4 ZeroTier 地址：
-          b= member.id
+    .section-heading
+      div
+        h3 IP 分配
+        p.muted 管理此成员的受管 IP 地址
 
-    .row
-      .col-sm-12
-        table.table.table-responsive.table-striped.table-hover
+    .table-responsive
+      table.table.table-striped.table-hover
+        thead
           tr
-            th(width='3%')
+            th
             th IP 地址
-
+        tbody
           each ipAssignment, index in member.ipAssignments
             tr
-              td(width='3%')
-                a.btn.btn-link(role='button' href='/controller/network/' + network.nwid + '/member/' + member.id + '/ipAssignments/' + index + '/delete')
-                  i.glyphicon.glyphicon-trash
               td
-                each digit in ipAssignment
-                  = digit
-
+                a.btn.btn-link.btn-sm(role='button' href='/controller/network/' + network.nwid + '/member/' + member.id + '/ipAssignments/' + index + '/delete' title='删除 IP')
+                  i.glyphicon.glyphicon-trash
+              td.mono-text= ipAssignment
           tr
             td
-              button.btn.btn-link(type='submit')
+              button.btn.btn-link.btn-sm(type='submit' title='添加 IP')
                 i.glyphicon.glyphicon-plus
             td
               input#ipAddress.form-control(type='text' name='ipAddress' placeholder='输入 IP 地址' value=(undefined===ipAssignment? '' : ipAssignment.ipAddress))
 
-    .row
-      .col-sm-12
-        a(href='/controller/network/' + network.nwid + '/routes')
-          h3 受管路由
-        table.table.table-responsive.table-striped.table-hover
+    .section-heading
+      div
+        h3 受管路由
+        p.muted 当前网络配置的可达网段
+      a.btn.btn-default.btn-sm(href='/controller/network/' + network.nwid + '/routes') 管理路由
+
+    .table-responsive
+      table.table.table-striped.table-hover
+        thead
           tr
             th
             th 目标网段
             th 网关
-            each route in network.routes
-              tr
-                td(width='3%')
-                  a.btn.btn-link(role='button' href='/controller/network/' + network.nwid + '/routes/' + route.target + '/delete')
-                    i.glyphicon.glyphicon-trash
-                td= route.target
-                td= route.via
+        tbody
+          each route in network.routes
+            tr
+              td
+                a.btn.btn-link.btn-sm(role='button' href='/controller/network/' + network.nwid + '/routes/' + route.target + '/delete' title='删除路由')
+                  i.glyphicon.glyphicon-trash
+              td.mono-text= route.target
+              td.mono-text= route.via
 
   if errors
-    .row
-      .col-sm-12
-        ul
-          for err in errors
-            li!= err.msg
+    .alert.alert-warning
+      ul
+        for err in errors
+          li!= err.msg
