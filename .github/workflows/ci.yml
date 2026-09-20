@@ -108,6 +108,9 @@ jobs:
               du -sh /app /app/node_modules /app/.next /opt/zerotier-planet /opt/zerotier-controller /usr/lib/postgresql /usr/local/lib/node_modules 2>/dev/null || true
               echo
               dpkg-query -W -f="\${Installed-Size}\t\${Package}\n" 2>/dev/null | sort -nr | head -n 25
+              echo
+              echo "Prisma native engines:"
+              find /app -type f \( -name "libquery_engine*" -o -name "query-engine*" -o -name "schema-engine*" \) -printf "%s\t%p\n" 2>/dev/null | sort -nr || true
             '
             echo '~~~'
           } | tee "$report"
