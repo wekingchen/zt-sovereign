@@ -38,7 +38,7 @@ RUN git init . \
     && git fetch --depth 1 origin "${CONTROLLER_ZEROTIER_SOURCE_REF}" \
     && git checkout --detach FETCH_HEAD \
     && git rev-parse HEAD > /tmp/controller-zerotier-commit
-RUN make -j"$(nproc)" \
+RUN make -j"$(nproc)" ZT_NONFREE=1 \
     && strip --strip-unneeded zerotier-one
 
 # -----------------------------------------------------------------------------
