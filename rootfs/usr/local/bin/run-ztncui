@@ -5,7 +5,7 @@ controller_home=${CONTROLLER_HOME:-/data/controller/one}
 controller_port=${CONTROLLER_ZT_PORT:-9993}
 state_dir=${ZTNCUI_STATE_DIR:-/data/ztncui}
 app_dir=${ZTNCUI_APP_DIR:-/opt/ztncui}
-http_port=${ZTNCUI_PORT:-3002}
+http_port=${ZTNCUI_PORT:-3000}
 
 mkdir -p "$state_dir/storage"
 chmod 700 "$state_dir" "$state_dir/storage" 2>/dev/null || true
