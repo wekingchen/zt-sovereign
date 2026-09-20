@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1.7
 
-ARG NODEJS_IMAGE=node:24-alpine3.22
+ARG NODEJS_IMAGE=node:24-alpine3.24
 
 # -----------------------------------------------------------------------------
 # PLANET / Root node: modern ZeroTier, open build only.
 # -----------------------------------------------------------------------------
-FROM alpine:3.22 AS planet_builder
+FROM alpine:3.24 AS planet_builder
 ARG PLANET_ZEROTIER_VERSION=1.16.2
 ARG PLANET_ZEROTIER_SOURCE_REF=1.16.2
 RUN apk add --no-cache \
@@ -26,7 +26,7 @@ RUN make -j"$(nproc)" \
 # Controller: compatibility branch that still contains the standalone controller.
 # Build on bookworm so the binary uses runtime-compatible glibc/OpenSSL.
 # -----------------------------------------------------------------------------
-FROM alpine:3.22 AS controller_builder
+FROM alpine:3.24 AS controller_builder
 ARG CONTROLLER_ZEROTIER_VERSION=1.14.2
 ARG CONTROLLER_ZEROTIER_SOURCE_REF=1.14.2
 RUN apk add --no-cache \
@@ -45,7 +45,7 @@ RUN make -j"$(nproc)" \
 # -----------------------------------------------------------------------------
 # ZTNet source. ZTNET_SOURCE_REF may be a release tag OR an immutable commit SHA.
 # -----------------------------------------------------------------------------
-FROM alpine:3.22 AS ztnet_source
+FROM alpine:3.24 AS ztnet_source
 ARG ZTNET_SOURCE_REF=v0.8.3
 RUN apk add --no-cache git ca-certificates \
     && mkdir -p /src \
