@@ -6,7 +6,7 @@ on:
   workflow_call:
     inputs:
       release_tag:
-        description: 'Existing release tag to publish, e.g. v0.4.0'
+        description: 'Existing release tag to publish, e.g. v0.4.2'
         required: false
         type: string
 
@@ -41,7 +41,7 @@ jobs:
             echo "Release tag $RELEASE_TAG does not match versions.env $expected" >&2
             exit 1
           }
-          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
+          for v in SOVEREIGN_VERSION ZEROTIER_VERSION ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
             echo "$v=${!v}" >> "$GITHUB_ENV"
           done
           echo "short_sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
@@ -62,10 +62,8 @@ jobs:
           tags: zerotier-sovereign:local
           build-args: |
             SOVEREIGN_VERSION=${{ env.SOVEREIGN_VERSION }}
-            PLANET_ZEROTIER_VERSION=${{ env.PLANET_ZEROTIER_VERSION }}
-            PLANET_ZEROTIER_SOURCE_REF=${{ env.PLANET_ZEROTIER_SOURCE_REF }}
-            CONTROLLER_ZEROTIER_VERSION=${{ env.CONTROLLER_ZEROTIER_VERSION }}
-            CONTROLLER_ZEROTIER_SOURCE_REF=${{ env.CONTROLLER_ZEROTIER_SOURCE_REF }}
+            ZEROTIER_VERSION=${{ env.ZEROTIER_VERSION }}
+            ZEROTIER_SOURCE_REF=${{ env.ZEROTIER_SOURCE_REF }}
             MKWORLD_SOURCE_REF=${{ env.MKWORLD_SOURCE_REF }}
             NODEJS_IMAGE=${{ env.NODEJS_IMAGE }}
           cache-from: |
@@ -119,7 +117,7 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           set -a; source versions.env; set +a
-          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
+          for v in SOVEREIGN_VERSION ZEROTIER_VERSION ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
             echo "$v=${!v}" >> "$GITHUB_ENV"
           done
           [[ -n "$DOCKERHUB_USERNAME" ]] || { echo "DOCKERHUB_USERNAME is empty" >&2; exit 1; }
@@ -136,10 +134,8 @@ jobs:
           provenance: false
           build-args: |
             SOVEREIGN_VERSION=${{ env.SOVEREIGN_VERSION }}
-            PLANET_ZEROTIER_VERSION=${{ env.PLANET_ZEROTIER_VERSION }}
-            PLANET_ZEROTIER_SOURCE_REF=${{ env.PLANET_ZEROTIER_SOURCE_REF }}
-            CONTROLLER_ZEROTIER_VERSION=${{ env.CONTROLLER_ZEROTIER_VERSION }}
-            CONTROLLER_ZEROTIER_SOURCE_REF=${{ env.CONTROLLER_ZEROTIER_SOURCE_REF }}
+            ZEROTIER_VERSION=${{ env.ZEROTIER_VERSION }}
+            ZEROTIER_SOURCE_REF=${{ env.ZEROTIER_SOURCE_REF }}
             MKWORLD_SOURCE_REF=${{ env.MKWORLD_SOURCE_REF }}
             NODEJS_IMAGE=${{ env.NODEJS_IMAGE }}
           tags: |
