@@ -24,7 +24,6 @@ RUN make -j"$(nproc)" \
 
 # -----------------------------------------------------------------------------
 # Controller: compatibility branch that still contains the standalone controller.
-# Build on bookworm so the binary uses runtime-compatible glibc/OpenSSL.
 # -----------------------------------------------------------------------------
 FROM alpine:3.24 AS controller_builder
 ARG CONTROLLER_ZEROTIER_VERSION=1.14.2
@@ -43,22 +42,21 @@ RUN make -j"$(nproc)" \
     && strip --strip-unneeded zerotier-one
 
 # -----------------------------------------------------------------------------
-# ZTNet source. ZTNET_SOURCE_REF may be a release tag OR an immutable commit SHA.
+# ztmkworld helper source.
+# This is a build-time dependency only; ZTNet is not a runtime component.
 # -----------------------------------------------------------------------------
-FROM alpine:3.24 AS ztnet_source
-ARG ZTNET_SOURCE_REF=v0.8.3
+FROM alpine:3.24 AS mkworld_source
+ARG MKWORLD_SOURCE_REF=3ba175a682d03edd72516d830667ee08fe3cf262
 RUN apk add --no-cache git ca-certificates \
     && mkdir -p /src \
     && git -C /src init \
     && git -C /src remote add origin https://github.com/sinamics/ztnet.git \
-    && git -C /src fetch --depth 1 origin "${ZTNET_SOURCE_REF}" \
+    && git -C /src fetch --depth 1 origin "${MKWORLD_SOURCE_REF}" \
     && git -C /src checkout --detach FETCH_HEAD \
-    && git -C /src rev-parse HEAD > /src/.source-commit \
-    && printf '%s\n' "${ZTNET_SOURCE_REF}" > /src/.source-ref
+    && git -C /src rev-parse HEAD > /src/.source-commit
 
 # -----------------------------------------------------------------------------
 # ztncui: project-maintained controller UI, built from vendored source.
-# Keep it separate from ZTNet during the migration experiment.
 # -----------------------------------------------------------------------------
 ARG NODEJS_IMAGE
 FROM ${NODEJS_IMAGE} AS ztncui_builder
@@ -72,11 +70,12 @@ RUN test -f app.js \
     && test -f bin/www \
     && node --check app.js \
     && node --check bin/www
-FROM ${NODEJS_IMAGE} AS ztmkworld_builder
+
+FROM ${NODEJS_IMAGE} AS mkworld_builder
 ARG TARGETPLATFORM
 WORKDIR /app
-COPY --from=ztnet_source /src/ztnodeid/build/linux_amd64/ztmkworld ztmkworld_amd64
-COPY --from=ztnet_source /src/ztnodeid/build/linux_arm64/ztmkworld ztmkworld_arm64
+COPY --from=mkworld_source /src/ztnodeid/build/linux_amd64/ztmkworld ztmkworld_amd64
+COPY --from=mkworld_source /src/ztnodeid/build/linux_arm64/ztmkworld ztmkworld_arm64
 RUN case "${TARGETPLATFORM}" in \
       "linux/amd64") cp ztmkworld_amd64 /usr/local/bin/ztmkworld ;; \
       "linux/arm64") cp ztmkworld_arm64 /usr/local/bin/ztmkworld ;; \
@@ -89,7 +88,7 @@ RUN case "${TARGETPLATFORM}" in \
 # -----------------------------------------------------------------------------
 ARG NODEJS_IMAGE
 FROM ${NODEJS_IMAGE} AS runtime
-ARG SOVEREIGN_VERSION=0.3.0
+ARG SOVEREIGN_VERSION=0.4.0
 ARG PLANET_ZEROTIER_VERSION=1.16.2
 ARG CONTROLLER_ZEROTIER_VERSION=1.14.2
 
@@ -110,7 +109,7 @@ RUN apk add --no-cache \
 # Project-maintained ztncui is the sole management UI.
 COPY --from=ztncui_builder /app /opt/ztncui
 COPY ui/ztncui/LICENSE /opt/ztncui/LICENSE
-COPY --from=ztmkworld_builder /usr/local/bin/ztmkworld /usr/local/bin/ztmkworld
+COPY --from=mkworld_builder /usr/local/bin/ztmkworld /usr/local/bin/ztmkworld
 
 # Keep the two ZeroTier installations physically separate inside the same image.
 RUN mkdir -p /opt/zerotier-planet /opt/zerotier-controller /usr/local/share/zerotier-sovereign
@@ -118,6 +117,7 @@ COPY --from=planet_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-planet/ze
 COPY --from=planet_builder /tmp/planet-zerotier-commit /usr/local/share/zerotier-sovereign/planet-zerotier-commit
 COPY --from=controller_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-controller/zerotier-one
 COPY --from=controller_builder /tmp/controller-zerotier-commit /usr/local/share/zerotier-sovereign/controller-zerotier-commit
+COPY --from=mkworld_source /src/.source-commit /usr/local/share/zerotier-sovereign/mkworld-source-commit
 RUN ln -s zerotier-one /opt/zerotier-planet/zerotier-idtool \
     && ln -s zerotier-one /opt/zerotier-planet/zerotier-cli \
     && ln -s zerotier-one /opt/zerotier-controller/zerotier-idtool \
