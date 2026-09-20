@@ -51,7 +51,8 @@ COPY ui/ztncui/src ./
 RUN test -f app.js \
     && test -f bin/www \
     && node --check app.js \
-    && node --check bin/www
+    && node --check bin/www \
+    && node -e "const fs=require('fs'),pug=require('pug'); for (const f of fs.readdirSync('views').filter(x=>x.endsWith('.pug'))) { pug.compileFile('views/'+f); } console.log('PASS all Pug templates compile');"
 
 FROM ${NODEJS_IMAGE} AS mkworld_builder
 ARG TARGETPLATFORM
@@ -71,7 +72,7 @@ RUN case "${TARGETPLATFORM}" in \
 # -----------------------------------------------------------------------------
 ARG NODEJS_IMAGE
 FROM ${NODEJS_IMAGE} AS runtime
-ARG SOVEREIGN_VERSION=0.4.2
+ARG SOVEREIGN_VERSION=0.5.0
 ARG ZEROTIER_VERSION=1.16.2
 
 ENV NODE_ENV=production \

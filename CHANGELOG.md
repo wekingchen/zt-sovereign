@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.0
+
+- 将项目维护的 ztncui 默认界面完整切换为简体中文（`zh-CN`）。
+- 汉化首页、导航、登录、管理员、网络、成员、路由、DNS、IP 分配、访问控制与 IPv4/IPv6 分配模式页面。
+- 汉化后端生成的页面标题、表单校验、认证提示及用户可见错误信息。
+- 新增 `ui/ztncui/src/locales/zh-cn.js`，为网络/成员详情中的常见 ZeroTier API 字段提供中文显示名称，同时保持底层 API 字段不变。
+- 错误详情不再把第三方英文异常原文直接显示到页面；完整技术错误写入容器日志。
+- 中文界面优先使用苹方、微软雅黑、Noto Sans CJK SC 等系统字体。
+- 新增 `test_ztncui_zh_cn.py` 汉化回归检查，防止常见英文 UI 文案重新混入。
+- ZeroTier 单二进制双实例、Controller API、持久化结构和 ztncui 数据格式均保持不变。
+
+
 ## v0.4.2
 
 - 将 PLANET 与 Controller 的两个 ZeroTier 构建阶段收敛为一个共享 `zerotier_builder`。

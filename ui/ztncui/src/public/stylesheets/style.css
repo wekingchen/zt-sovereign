@@ -1,5 +1,5 @@
 html, body {
-    font: 16px "Lucida Grande", Helvetica, Arial, sans-serif;
+    font: 16px -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", Helvetica, Arial, sans-serif;
 }
 
 input[type=checkbox] {

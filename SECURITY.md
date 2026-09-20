@@ -2,7 +2,7 @@
 
 - 不要提交 `.env`、`data/`、备份包、`identity.secret`、World signing keys、Controller `authtoken.secret`、ztncui 密码文件或 session secret。
 - ztncui 默认只绑定宿主机 `127.0.0.1:3000`；远程管理建议通过 VPN、反向代理或 SSH tunnel。
-- v0.4.2 首次启动默认生成随机一次性 admin 密码，而不是使用上游默认 `admin/password`。
+- v0.5.0 首次启动默认生成随机一次性 admin 密码，而不是使用上游默认 `admin/password`。
 - 一次性密码存放在 `/data/ztncui/initial-admin-password`，权限为 0600；首次改密成功后会删除。
 - 如果设置 `ZTNCUI_ADMIN_PASSWORD`，请使用强随机密码并避免把它提交到仓库。
 - PLANET 文件服务默认只绑定宿主机 `127.0.0.1:3001`，并使用持久化随机 key。

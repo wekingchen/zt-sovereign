@@ -15,6 +15,7 @@ const bodyParser = require('body-parser');
 const expressValidator = require('express-validator');
 const session = require('express-session');
 const helmet = require('helmet');
+const zhCN = require('./locales/zh-cn');
 
 const index = require('./routes/index');
 const users = require('./routes/users');
@@ -27,6 +28,8 @@ const session_secret = process.env.ZTNCUI_SESSION_SECRET || Math.random().toStri
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
+app.locals.zhLabel = zhCN.label;
+app.locals.zhTitle = zhCN.title;
 
 app.use(helmet());
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
