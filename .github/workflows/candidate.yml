@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: publish-candidate-${{ github.repository }}
@@ -37,19 +36,22 @@ jobs:
 
       - uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Load pins and image name
         id: vars
         shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           set -a; source versions.env; set +a
           for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
             echo "$v=${!v}" >> "$GITHUB_ENV"
           done
-          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          [[ -n "$DOCKERHUB_USERNAME" ]] || { echo "DOCKERHUB_USERNAME is empty" >&2; exit 1; }
+          echo "image=${DOCKERHUB_USERNAME,,}/zt-sovereign" >> "$GITHUB_OUTPUT"
           echo "short_sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build and push native ${{ matrix.arch }} candidate
@@ -87,14 +89,16 @@ jobs:
 
       - uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Prepare ARM64 runtime test environment
         shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          image="ghcr.io/${GITHUB_REPOSITORY,,}:candidate-arm64"
+          image="${DOCKERHUB_USERNAME,,}/zt-sovereign:candidate-arm64"
           cp .env.example .env
           sed -i "s#^SOVEREIGN_IMAGE=.*#SOVEREIGN_IMAGE=$image#" .env
           sed -i 's/^PLANET_IP_ADDR4=.*/PLANET_IP_ADDR4=127.0.0.1/' .env
@@ -129,18 +133,20 @@ jobs:
 
       - uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Merge native images into multi-arch candidate
         shell: bash
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           set -euo pipefail
-          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          image="${DOCKERHUB_USERNAME,,}/zt-sovereign"
           short_sha="${HEAD_SHA:0:12}"
+          [[ -n "$DOCKERHUB_USERNAME" ]] || { echo "DOCKERHUB_USERNAME is empty" >&2; exit 1; }
 
           docker buildx imagetools create \
             --tag "$image:candidate" \
