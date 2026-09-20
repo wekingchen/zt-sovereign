@@ -171,18 +171,51 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Merge native release images into multi-arch manifests
         shell: bash
         env:
           RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           set -euo pipefail
-          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          ghcr_image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          dockerhub_image="${DOCKERHUB_USERNAME,,}/zt-sovereign"
           short_sha=$(git rev-parse --short=12 HEAD)
 
-          docker buildx imagetools create             --tag "$image:$RELEASE_TAG"             "$image:$RELEASE_TAG-amd64"             "$image:$RELEASE_TAG-arm64"
+          [[ -n "$DOCKERHUB_USERNAME" ]] || { echo "DOCKERHUB_USERNAME is empty" >&2; exit 1; }
 
-          docker buildx imagetools create             --tag "$image:sha-$short_sha"             "$image:sha-$short_sha-amd64"             "$image:sha-$short_sha-arm64"
+          docker buildx imagetools create \
+            --tag "$ghcr_image:$RELEASE_TAG" \
+            "$ghcr_image:$RELEASE_TAG-amd64" \
+            "$ghcr_image:$RELEASE_TAG-arm64"
 
-          docker buildx imagetools inspect "$image:$RELEASE_TAG"
-          docker buildx imagetools inspect "$image:sha-$short_sha"
+          docker buildx imagetools create \
+            --tag "$ghcr_image:sha-$short_sha" \
+            "$ghcr_image:sha-$short_sha-amd64" \
+            "$ghcr_image:sha-$short_sha-arm64"
+
+          docker buildx imagetools inspect "$ghcr_image:$RELEASE_TAG"
+          docker buildx imagetools inspect "$ghcr_image:sha-$short_sha"
+
+          # Mirror the exact validated multi-arch OCI indexes to Docker Hub.
+          docker buildx imagetools create \
+            --tag "$dockerhub_image:$RELEASE_TAG" \
+            "$ghcr_image:$RELEASE_TAG"
+
+          docker buildx imagetools create \
+            --tag "$dockerhub_image:latest" \
+            "$ghcr_image:$RELEASE_TAG"
+
+          docker buildx imagetools create \
+            --tag "$dockerhub_image:sha-$short_sha" \
+            "$ghcr_image:sha-$short_sha"
+
+          docker buildx imagetools inspect "$dockerhub_image:$RELEASE_TAG"
+          docker buildx imagetools inspect "$dockerhub_image:latest"
