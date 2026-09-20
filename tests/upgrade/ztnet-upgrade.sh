@@ -34,6 +34,7 @@ mkdir -p "$BASE_ROOT/data/planet"/{one,world,dist,config} "$BASE_ROOT/data/contr
 # and environment contract remain exactly as they were.
 cp "$ROOT/.env" "$BASE_ROOT/.env"
 sed -i 's/^SOVEREIGN_IMAGE=.*/SOVEREIGN_IMAGE=zerotier-sovereign:upgrade-old/' "$BASE_ROOT/.env"
+sed -i 's/^ZTNCUI_PORT=.*/ZTNCUI_PORT=3002/' "$BASE_ROOT/.env"
 grep -q '^POSTGRES_PASSWORD=' "$BASE_ROOT/.env" || echo 'POSTGRES_PASSWORD=upgrade-ci-only-password' >> "$BASE_ROOT/.env"
 grep -q '^ZTNET_AUTH_SECRET=' "$BASE_ROOT/.env" || echo 'ZTNET_AUTH_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' >> "$BASE_ROOT/.env"
 grep -q '^ZTNET_URL=' "$BASE_ROOT/.env" || echo 'ZTNET_URL=http://127.0.0.1:3000' >> "$BASE_ROOT/.env"
