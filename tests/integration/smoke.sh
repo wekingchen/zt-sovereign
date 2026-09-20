@@ -11,7 +11,7 @@ wait_healthy() {
     sleep 2
   done
   docker compose ps || true
-  docker compose logs --no-color --tail=300 sovereign postgres || true
+  docker compose logs --no-color --tail=300 sovereign || true
   return 1
 }
 
@@ -46,8 +46,7 @@ docker compose exec -T sovereign curl -fsS \
   -H "X-ZT1-Auth: $token" \
   -X DELETE "http://127.0.0.1:9993/controller/network/$nwid" >/dev/null
 
-curl -fsS "http://127.0.0.1:${ZTNET_PORT:-3000}/" >/dev/null
-curl -fsS "http://127.0.0.1:${ZTNCUI_PORT:-3002}/" >/dev/null
+curl -fsS "http://127.0.0.1:${ZTNCUI_PORT:-3000}/" >/dev/null
 
 # Verify the vendored ztncui controller client against the real Controller API.
 docker compose exec -T sovereign sh -lc '
@@ -77,13 +76,9 @@ cookies=$(mktemp)
 curl -sS -D "$headers" -o /dev/null -c "$cookies" \
   -H 'Content-Type: application/x-www-form-urlencoded' \
   --data 'username=admin&password=password' \
-  "http://127.0.0.1:${ZTNCUI_PORT:-3002}/login"
+  "http://127.0.0.1:${ZTNCUI_PORT:-3000}/login"
 grep -Eq '^HTTP/[^ ]+ 302' "$headers"
 grep -Eqi '^location: /users/admin/password' "$headers"
 rm -f "$headers" "$cookies"
-
-# Prisma migrations must have been applied to PostgreSQL.
-docker compose exec -T postgres psql -U "${POSTGRES_USER:-ztnet}" -d "${POSTGRES_DB:-ztnet}" -Atqc \
-  'select count(*) from "_prisma_migrations";' | grep -Eq '^[1-9][0-9]*$'
 
 echo "PASS integration smoke"
