@@ -42,7 +42,7 @@ jobs:
 
           zt_tag=$(gh api repos/zerotier/ZeroTierOne/releases/latest --jq .tag_name)
           zt_sha=$(resolve_tag_commit zerotier/ZeroTierOne "$zt_tag")
-          controller_sha=$(resolve_tag_commit zerotier/ZeroTierOne "$CONTROLLER_ZEROTIER_VERSION")
+          controller_sha="$zt_sha"
 
           {
             echo "zt_tag=$zt_tag"
@@ -78,14 +78,14 @@ jobs:
           if vals.get('PLANET_ZEROTIER_VERSION') == os.environ['ZT_TAG'] and is_sha(vals.get('PLANET_ZEROTIER_SOURCE_REF', '')):
               if vals['PLANET_ZEROTIER_SOURCE_REF'].lower() != os.environ['ZT_SHA'].lower():
                   raise SystemExit('SECURITY: ZeroTier release tag moved after it was pinned; manual review required')
-          if vals.get('CONTROLLER_ZEROTIER_VERSION') and is_sha(vals.get('CONTROLLER_ZEROTIER_SOURCE_REF', '')):
+          if vals.get('CONTROLLER_ZEROTIER_VERSION') == os.environ['ZT_TAG'] and is_sha(vals.get('CONTROLLER_ZEROTIER_SOURCE_REF', '')):
               if vals['CONTROLLER_ZEROTIER_SOURCE_REF'].lower() != os.environ['CONTROLLER_SHA'].lower():
-                  raise SystemExit('SECURITY: pinned Controller compatibility tag moved; manual review required')
+                  raise SystemExit('SECURITY: ZeroTier Controller release tag moved after it was pinned; manual review required')
 
           updates = {
               'PLANET_ZEROTIER_VERSION': os.environ['ZT_TAG'],
               'PLANET_ZEROTIER_SOURCE_REF': os.environ['ZT_SHA'],
-              # Controller version is intentionally NOT auto-upgraded; only pin its current tag to a commit.
+              'CONTROLLER_ZEROTIER_VERSION': os.environ['ZT_TAG'],
               'CONTROLLER_ZEROTIER_SOURCE_REF': os.environ['CONTROLLER_SHA'],
           }
           lines = text.splitlines()
@@ -123,5 +123,5 @@ jobs:
               --head "$branch" \
               --base main \
               --title 'chore: validate newest upstream releases' \
-              --body $'Automated ZeroTier PLANET candidate update.\n\nCI, integration tests, persistence tests and upgrade tests must pass before merge. The standalone Controller compatibility version is intentionally not auto-upgraded. ztncui is maintained in-repo; ztmkworld remains pinned separately as a build-time helper.'
+              --body $'Automated ZeroTier PLANET + Controller candidate update.\n\nCI, real Controller API, ztncui CRUD, persistence tests and upgrade tests must pass before merge. The Controller uses the source-available non-commercial component and this project is for personal non-commercial research only. ztncui is maintained in-repo; ztmkworld remains pinned separately as a build-time helper.'
           fi
