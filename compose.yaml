@@ -12,15 +12,9 @@ services:
         PLANET_ZEROTIER_SOURCE_REF: ${PLANET_ZEROTIER_SOURCE_REF:-1.16.2}
         CONTROLLER_ZEROTIER_VERSION: ${CONTROLLER_ZEROTIER_VERSION:-1.14.2}
         CONTROLLER_ZEROTIER_SOURCE_REF: ${CONTROLLER_ZEROTIER_SOURCE_REF:-1.14.2}
-        ZTNET_SOURCE_REF: ${ZTNET_SOURCE_REF:-v0.8.3}
-        ZTNET_VERSION: ${ZTNET_VERSION:-v0.8.3}
-        NEXT_PUBLIC_APP_VERSION: ${ZTNET_VERSION:-v0.8.3}
-        NODEJS_IMAGE: ${ZTNET_NODE_IMAGE:-node:24-bookworm-slim}
+        NODEJS_IMAGE: ${ZTNET_NODE_IMAGE:-node:24-alpine3.24}
     container_name: zerotier-sovereign
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       # PLANET/root
       PLANET_IP_ADDR4: ${PLANET_IP_ADDR4:-}
@@ -33,16 +27,9 @@ services:
       # Standalone controller
       CONTROLLER_ZT_PORT: ${CONTROLLER_ZT_PORT:-9993}
 
-      # ZTNet
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB:-ztnet}
-      POSTGRES_USER: ${POSTGRES_USER:-ztnet}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      NEXTAUTH_URL: ${ZTNET_URL:?Set ZTNET_URL in .env}
-      NEXTAUTH_SECRET: ${ZTNET_AUTH_SECRET:?Set ZTNET_AUTH_SECRET in .env}
-      ZT_ADDR: http://127.0.0.1:${CONTROLLER_ZT_PORT:-9993}
-      ZTNCUI_PORT: 3002
+      # ztncui
+      ZTNCUI_PORT: 3000
+
     ports:
       # Public/reachable PLANET endpoint.
       - "${PLANET_BIND_IP:-0.0.0.0}:${PLANET_ZT_PORT:-9994}:${PLANET_ZT_PORT:-9994}/udp"
@@ -50,8 +37,7 @@ services:
       # Controller VL1 traffic. Its HTTP management API is NOT published.
       - "${CONTROLLER_BIND_IP:-0.0.0.0}:${CONTROLLER_ZT_PORT:-9993}:${CONTROLLER_ZT_PORT:-9993}/udp"
       # Management UI and PLANET download service stay loopback-only by default.
-      - "${ZTNET_BIND_IP:-127.0.0.1}:${ZTNET_PORT:-3000}:3000/tcp"
-      - "${ZTNCUI_BIND_IP:-127.0.0.1}:${ZTNCUI_PORT:-3002}:3002/tcp"
+      - "${ZTNCUI_BIND_IP:-127.0.0.1}:${ZTNCUI_PORT:-3000}:3000/tcp"
       - "${PLANET_FILE_BIND_IP:-127.0.0.1}:${PLANET_FILE_PORT:-3001}:3001/tcp"
     volumes:
       - ./data/planet:/data/planet
@@ -59,18 +45,3 @@ services:
       - ./data/ztncui:/data/ztncui
     stop_grace_period: 30s
 
-  postgres:
-    image: ${POSTGRES_IMAGE:-postgres:17-alpine}
-    container_name: zerotier-sovereign-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ztnet}
-      POSTGRES_USER: ${POSTGRES_USER:-ztnet}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-    volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
