@@ -1,17 +1,26 @@
 # Third-party notices
 
-本项目在构建或运行过程中使用第三方软件。使用、修改或分发镜像前，应同时遵守这些项目及实际固定版本所附的许可证。本文件用于记录工程来源与边界，不替代各上游许可证正文，也不构成法律意见。
+本项目仅定位为 **个人、非商业研究与学习用途**。本文件记录第三方组件的来源与许可证边界，不替代各上游许可证正文，也不构成法律意见。
 
 ## ZeroTierOne
 
 Source: https://github.com/zerotier/ZeroTierOne
 
-本项目有意将两个 ZeroTier 版本作为不同构建阶段和不同运行二进制处理：
+当前验证基线同时使用 ZeroTier 1.16.2：
 
-- PLANET：跟踪经过 CI 验证的现代正式版本，使用不启用 `ZT_NONFREE` / Controller 的构建。
-- Standalone Controller：保持在项目验证过的兼容版本；自动更新不会把它跨版本升级。
+- PLANET / Root：开放 Agent 构建，不启用 Controller。
+- Standalone Controller：启用 `ZT_NONFREE=1`，使用 `nonfree/controller` 中的 FileDB Controller。
+- Pinned source commit: `fc5c3ec22090b5b2a0f274e863651fe9ca489bf4`
 
-ZeroTier 的不同版本、组件和时间点可能适用不同许可。仓库自动化不会把“PLANET 可升级”推导成“Controller 也可按相同规则升级”。
+ZeroTier 1.16.2 的 `nonfree/LICENSE.md` 将 Controller 定义为 source-available 组件，并允许其定义范围内的个人非商业、教育研究及有限评估用途；商业使用需要另行获得 ZeroTier 授权。本项目不面向商业、组织生产或服务化使用。
+
+运行镜像保留该许可证正文：
+
+```text
+/usr/local/share/zerotier-sovereign/ZEROTIER-NONFREE-LICENSE.md
+```
+
+Upstream Check 可以提出新的 ZeroTier 正式版本候选，但不会自动合并。PLANET 与 Controller 更新必须经过 CI、真实 Controller API、ztncui CRUD、重启持久化与升级测试。
 
 ## ztncui
 
@@ -25,13 +34,13 @@ Source: https://github.com/key-networks/ztncui
 - Provenance: `ui/ztncui/UPSTREAM.md`
 - License copy: `ui/ztncui/LICENSE`
 
-导入后的项目修改也保存在本仓库中，因此运行镜像不需要在构建时再下载 ztncui 源码。
+ztncui 及其衍生修改继续遵循 GPLv3，不受仓库根目录针对项目自有代码的非商业许可证替代。
 
 ## ztmkworld build helper
 
 Source repository: https://github.com/sinamics/ztnet
 
-ZeroTier Sovereign **不再运行或分发 ZTNet Web 应用本身**。当前只从 `versions.env` 中固定的不可变 commit `MKWORLD_SOURCE_REF` 取得 `ztnodeid/build/<arch>/ztmkworld`，作为生成自定义 PLANET world 的辅助程序。
+ZeroTier Sovereign **不运行或分发 ZTNet Web 应用本身**。当前只从 `versions.env` 中固定的不可变 commit `MKWORLD_SOURCE_REF` 取得 `ztnodeid/build/<arch>/ztmkworld`，作为生成自定义 PLANET world 的辅助程序。
 
 当前固定来源：
 
@@ -39,14 +48,8 @@ ZeroTier Sovereign **不再运行或分发 ZTNet Web 应用本身**。当前只�
 - Source subtree: `ztnodeid/`
 - Runtime provenance: 镜像内 `/usr/local/share/zerotier-sovereign/mkworld-source-commit`
 
-需要注意，固定的 `ztnodeid` 源码树并非可以简单概括成单一许可证：上游仓库根许可证为 GPLv3，而该子树中可见部分文件明确标记为 `AGPL-3.0-only`，另有来自 ZeroTier 的 BSD 3-Clause 许可代码。分发 `ztmkworld` 二进制时，应以固定 commit 中对应文件的实际版权/许可证声明为准，并保持对应源码可获得。
-
-这里保留 ZTNet 仓库仅作为这个构建期 helper 的来源与可追溯入口；它不是 v0.4.0 的运行时管理界面、数据库层或应用依赖。
+固定的 `ztnodeid` 源码树包含多种许可证声明，应以固定 commit 中对应文件的实际版权/许可证为准并保持来源可追溯。
 
 ## Alpine Linux / Node.js / Rust / npm dependencies
 
-v0.4.0 运行镜像基于 Alpine 版 Node.js。构建 ZeroTier 时使用 Alpine 工具链与 Rust；构建项目维护的 ztncui 时安装其 npm 运行依赖。这些软件与依赖分别遵守各自上游许可证。
-
-## 已移除的 v0.3 运行组件
-
-v0.4.0 不再包含 ZTNet、Next.js、Prisma 或 PostgreSQL 运行组件。旧版本中的 PostgreSQL 数据不会被新架构继续消费；升级时 PLANET、Controller 和 ztncui 的持久化状态与数据库退役是有意区分的。
+运行镜像基于 Alpine 版 Node.js。构建 ZeroTier 时使用 Alpine 工具链与 Rust；构建项目维护的 ztncui 时安装其 npm 运行依赖。这些软件与依赖分别遵守各自上游许可证。
