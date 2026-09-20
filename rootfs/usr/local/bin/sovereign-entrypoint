@@ -50,4 +50,4 @@ chmod 600 "$CONTROLLER_HOME/local.conf"
 : "${NEXTAUTH_URL:?NEXTAUTH_URL is required}"
 : "${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required}"
 
-exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/sovereign.conf
+exec /usr/local/bin/sovereign-supervise
