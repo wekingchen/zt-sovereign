@@ -19,4 +19,4 @@ sha256sum "$out" > "$out.sha256"
 
 echo "Backup: $out"
 echo "SHA256: $out.sha256"
-echo "CRITICAL: archive contains PLANET/Controller identities, world signing keys, ZTNet DB and application secrets. Store securely."
+echo "CRITICAL: archive contains PLANET/Controller identities, world signing keys, ztncui credentials/session state and application secrets. Store securely."
