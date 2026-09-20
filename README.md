@@ -298,8 +298,8 @@ ubuntu-24.04-arm  -> linux/arm64
 并发布：
 
 ```text
-<dockerhub-username>/zt-sovereign:candidate
-<dockerhub-username>/zt-sovereign:sha-xxxxxxxxxxxx
+goordonchen/zt-sovereign:candidate
+goordonchen/zt-sovereign:sha-xxxxxxxxxxxx
 ```
 
 ARM64 会在原生 ARM Runner 上执行实际集成与重启持久化测试，不使用 QEMU 冒充运行验证。
@@ -316,8 +316,8 @@ git push origin v0.4.0
 Release workflow 会重新执行 amd64 验证，并原生构建 amd64 / arm64，最后发布：
 
 ```text
-<dockerhub-username>/zt-sovereign:v0.4.0
-<dockerhub-username>/zt-sovereign:sha-xxxxxxxxxxxx
+goordonchen/zt-sovereign:v0.4.0
+goordonchen/zt-sovereign:sha-xxxxxxxxxxxx
 ```
 
 ### Promote Stable
@@ -331,7 +331,7 @@ v0.4.0 -> stable
 生产部署仍建议锁定明确版本：
 
 ```env
-SOVEREIGN_IMAGE=<dockerhub-username>/zt-sovereign:v0.4.0
+SOVEREIGN_IMAGE=goordonchen/zt-sovereign:v0.4.0
 ```
 
 而不是直接依赖会移动的 `stable` 标签。
