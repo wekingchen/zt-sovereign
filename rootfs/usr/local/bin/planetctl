@@ -5,7 +5,7 @@ WORLD_DIR=${WORLD_DIR:-/data/planet/world}
 DIST_DIR=${DIST_DIR:-/data/planet/dist}
 CONFIG_DIR=${CONFIG_DIR:-/data/planet/config}
 ZT_PORT=${PLANET_ZT_PORT:-9994}
-ZT_IDTOOL=${PLANET_ZT_IDTOOL:-/opt/zerotier-planet/zerotier-idtool}
+ZT_IDTOOL=${PLANET_ZT_IDTOOL:-/opt/zerotier/zerotier-idtool}
 MKWORLD=${PLANET_MKWORLD:-/usr/local/bin/ztmkworld}
 WORLD_ID=${PLANET_WORLD_ID:-149604618}
 mkdir -p "$ZT_HOME" "$WORLD_DIR" "$DIST_DIR" "$CONFIG_DIR"
