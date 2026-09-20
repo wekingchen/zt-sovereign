@@ -21,10 +21,10 @@ start_child() {
 shutdown_children() {
   trap - TERM INT
   local pid
-  for pid in "${pids[@]:-}"; do
+  for pid in "${pids[@]}"; do
     kill -TERM "$pid" 2>/dev/null || true
   done
-  for pid in "${pids[@]:-}"; do
+  for pid in "${pids[@]}"; do
     wait "$pid" 2>/dev/null || true
   done
   rm -f "$RUN_DIR"/*.pid
