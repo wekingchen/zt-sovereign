@@ -56,19 +56,33 @@ token=$(docker exec zerotier-sovereign sh -lc 'cat /data/controller/one/authtoke
 status=$(docker exec zerotier-sovereign curl -fsS -H "X-ZT1-Auth: $token" http://127.0.0.1:9993/status)
 addr=$(printf '%s' "$status" | python3 -c 'import json,sys; print(json.load(sys.stdin)["address"])')
 nwid="${addr}c1a0ee"
-docker exec zerotier-sovereign curl -fsS   -H "X-ZT1-Auth: $token" -H 'Content-Type: application/json'   -X POST -d '{"name":"migration-persist-me"}'   "http://127.0.0.1:9993/controller/network/$nwid" >/dev/null
+docker exec zerotier-sovereign curl -fsS \
+  -H "X-ZT1-Auth: $token" -H 'Content-Type: application/json' \
+  -X POST -d '{"name":"migration-persist-me"}' \
+  "http://127.0.0.1:9993/controller/network/$nwid" >/dev/null
 
 (
   cd "$BASE_ROOT"
   docker compose stop
 )
 
-# Move only the state that belongs to the new architecture. PostgreSQL is
-# intentionally left behind: it is no longer part of the candidate runtime.
+# Move only the state that belongs to the new architecture. The files include
+# mode-0600 secrets owned by root inside the container, so copy them through the
+# Docker daemon rather than reading the bind mount as the unprivileged CI user.
+# PostgreSQL is intentionally left behind: it is no longer part of the candidate
+# runtime.
 mkdir -p "$ROOT/data"
-cp -a "$BASE_ROOT/data/planet" "$ROOT/data/"
-cp -a "$BASE_ROOT/data/controller" "$ROOT/data/"
-cp -a "$BASE_ROOT/data/ztncui" "$ROOT/data/"
+docker cp zerotier-sovereign:/data/planet "$ROOT/data/"
+docker cp zerotier-sovereign:/data/controller "$ROOT/data/"
+docker cp zerotier-sovereign:/data/ztncui "$ROOT/data/"
+
+# The old and candidate compose files intentionally use the same stable
+# container name. Remove the stopped old stack after extracting its state so the
+# candidate can claim that name. Bind-mounted source data remains on disk.
+(
+  cd "$BASE_ROOT"
+  docker compose down
+)
 
 export SOVEREIGN_IMAGE="$NEW_IMAGE"
 docker compose up -d --no-build sovereign
@@ -82,7 +96,9 @@ test "$passwd_before" = "$(hash_file zerotier-sovereign /data/ztncui/passwd)"
 test "$session_before" = "$(hash_file zerotier-sovereign /data/ztncui/session.secret)"
 
 token=$(docker exec zerotier-sovereign sh -lc 'cat /data/controller/one/authtoken.secret' | tr -d '\r\n')
-docker exec zerotier-sovereign curl -fsS   -H "X-ZT1-Auth: $token"   "http://127.0.0.1:9993/controller/network/$nwid" |
+docker exec zerotier-sovereign curl -fsS \
+  -H "X-ZT1-Auth: $token" \
+  "http://127.0.0.1:9993/controller/network/$nwid" |
   grep -q 'migration-persist-me'
 
 curl -fsS "http://127.0.0.1:${ZTNCUI_PORT:-3000}/" >/dev/null
