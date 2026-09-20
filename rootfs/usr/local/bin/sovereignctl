@@ -27,6 +27,17 @@ Architecture:
 TXT
 }
 
+ztncui_initial_password() {
+  local file=${ZTNCUI_INITIAL_PASSWORD_FILE:-/data/ztncui/initial-admin-password}
+  if [[ -s "$file" ]]; then
+    cat "$file"
+    echo
+  else
+    echo >&2 "Initial ztncui admin password is not available (it may already have been changed)."
+    return 1
+  fi
+}
+
 controller_status() {
   if [[ ! -s "$CONTROLLER_HOME/authtoken.secret" ]]; then
     echo >&2 "Controller token not ready"
@@ -71,6 +82,7 @@ case "${1:-}" in
   health) sovereign-healthcheck && echo OK ;;
   planet) shift; exec planetctl "$@" ;;
   controller-status) controller_status ;;
+  ztncui-initial-password) ztncui_initial_password ;;
   *)
     cat <<'TXT'
 Usage: sovereignctl <command>
@@ -81,6 +93,7 @@ Commands:
   health              Run the container health checks now.
   planet <command>    Pass through to planetctl.
   controller-status   Query the local Controller service API.
+  ztncui-initial-password  Show the one-time generated admin password before it is changed.
 TXT
     ;;
 esac
