@@ -36,7 +36,6 @@ trap 'shutdown_children; exit 130' INT
 start_child planet /usr/local/bin/run-planet
 start_child controller /usr/local/bin/run-controller
 start_child planet-files /usr/local/bin/file_server.js
-start_child ztnet /usr/local/bin/run-ztnet
 start_child ztncui /usr/local/bin/run-ztncui
 
 set +e
