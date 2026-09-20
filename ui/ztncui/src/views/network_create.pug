@@ -6,28 +6,28 @@
 extends controller_layout
 
 block content
-  .row
-    .col-sm-12
+  .page-heading
+    div
       h1= title
+      p.muted 创建一个由当前 Controller 管理的新 ZeroTier 网络
 
   if error
-     b #{error}
+    .alert.alert-danger
+      strong #{error}
   else
+    form.form-narrow(method='POST' action='')
+      .form-group
+        label(for='name') 网络名称
+        input#name.form-control(type='text' name='name' placeholder='请输入新网络名称' value=(undefined===name ? '' : name.name) autofocus=true)
 
-    form(method='POST' action='')
-      .form-group.row
-        .col-sm-2
-          label(for='name') 网络名称：
-        .col-sm-10
-          input#name.form-control(type='text' name='name' placeholder='请输入新网络名称' value=(undefined===name ? '' : name.name))
-
-      .form-group.row
-        .col-sm-12
-          button.btn.btn-primary(type='submit') 创建网络
+      .action-bar
+        button.btn.btn-primary(type='submit')
+          span.glyphicon.glyphicon-plus.nav-icon
+          | 创建网络
+        a.btn.btn-default(href='/controller/networks' role='button') 取消
 
     if errors
-      .row
-        .col-sm-12
-          ul
-            for err in errors
-              li!= err.msg
+      .alert.alert-warning
+        ul
+          for err in errors
+            li!= err.msg
