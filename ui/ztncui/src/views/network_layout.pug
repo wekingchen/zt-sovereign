@@ -7,20 +7,23 @@ extends controller_layout
 
 block content
   if error
-     b #{error}
+    .alert.alert-danger
+      strong #{error}
   else
     .row
       .col-sm-10
         block network_title
-          h2
-            | 网络 
-            a(href='/controller/network/' + network.nwid) #{network.name}
-            |  (#{network.nwid}):
+          .network-heading
+            h2
+              | 网络 
+              a(href='/controller/network/' + network.nwid) #{network.name}
+            span.network-id #{network.nwid}
         block title
           if title
             h3= title
-
       .col-sm-2
-        h2.right
-          a.btn.btn-default(href=navigate.whence role='button') 返回
+        .text-right
+          a.btn.btn-default(href=navigate.whence role='button')
+            span.glyphicon.glyphicon-chevron-left.nav-icon
+            | 返回
     block net_content
