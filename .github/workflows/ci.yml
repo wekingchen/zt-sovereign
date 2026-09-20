@@ -18,10 +18,13 @@ jobs:
       - name: ShellCheck
         shell: bash
         run: |
-          mapfile -t files < <(find scripts tests rootfs/usr/local/bin -type f \( -name '*.sh' -o -perm -u+x \) ! -name '*.py' -print)
+          mapfile -t files < <(find scripts tests rootfs/usr/local/bin -type f \( -name '*.sh' -o -perm -u+x \) ! -name '*.py' ! -name '*.js' -print)
+          files+=(rootfs/usr/local/bin/sovereign-supervise)
           shellcheck "${files[@]}"
-      - name: Python syntax
-        run: python3 -m py_compile rootfs/usr/local/bin/file_server.py tests/unit/test_file_server.py
+      - name: Runtime script syntax
+        run: |
+          python3 -m py_compile tests/unit/test_file_server.py
+          node --check rootfs/usr/local/bin/file_server.js
       - name: Unit tests
         run: ./tests/unit/run.sh
       - name: Ensure generated version fields are committed
@@ -90,6 +93,7 @@ jobs:
           bytes="$(docker image inspect zerotier-sovereign:local --format '{{.Size}}')"
           mib="$(( (bytes + 1048575) / 1048576 ))"
           echo "Runtime image size: ${bytes} bytes (${mib} MiB)"
+          report="$(mktemp)"
           {
             echo "### Runtime image footprint"
             echo
@@ -101,12 +105,14 @@ jobs:
             echo
             echo '~~~text'
             docker run --rm --entrypoint /bin/bash zerotier-sovereign:local -lc '
-              du -sh /app /app/node_modules /app/.next /opt/zerotier-planet /opt/zerotier-controller /usr/lib/postgresql 2>/dev/null || true
+              du -sh /app /app/node_modules /app/.next /opt/zerotier-planet /opt/zerotier-controller /usr/lib/postgresql /usr/local/lib/node_modules 2>/dev/null || true
               echo
               dpkg-query -W -f="\${Installed-Size}\t\${Package}\n" 2>/dev/null | sort -nr | head -n 25
             '
             echo '~~~'
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee "$report"
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$report"
 
       - name: Start stack
         run: docker compose up -d --no-build
