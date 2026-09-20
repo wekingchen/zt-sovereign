@@ -39,8 +39,22 @@ controller_status() {
   echo
 }
 
+process_status() {
+  local run_dir=/run/sovereign name pid state
+  for name in planet controller planet-files ztnet; do
+    pid=""
+    [[ -s "$run_dir/$name.pid" ]] && pid=$(<"$run_dir/$name.pid")
+    if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+      state=RUNNING
+    else
+      state=STOPPED
+    fi
+    printf '%-16s %-8s pid %s\n' "$name" "$state" "${pid:-?}"
+  done
+}
+
 status() {
-  supervisorctl -c /etc/supervisor/conf.d/sovereign.conf status || true
+  process_status
   echo
   echo "--- PLANET ---"
   planetctl info || true
@@ -64,7 +78,7 @@ Usage: sovereignctl <command>
 
 Commands:
   version             Show embedded component versions and source commits.
-  status              Show supervisor, PLANET, Controller and ZTNet status.
+  status              Show process, PLANET, Controller and ZTNet status.
   health              Run the container health checks now.
   planet <command>    Pass through to planetctl.
   controller-status   Query the local Controller service API.
