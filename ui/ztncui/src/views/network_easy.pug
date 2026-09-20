@@ -67,15 +67,15 @@ block net_content
 
     .form-group
       label(for='networkCIDR') 网络地址（CIDR）
-      input#networkCIDR.form-control(type='text' name='networkCIDR' onchange='CIDRtoPool(this.value)' placeholder='e.g. 10.11.12.0/24' value=(undefined===network.routes[0]? '' : network.routes[0].target))
+      input#networkCIDR.form-control(type='text' name='networkCIDR' onchange='CIDRtoPool(this.value)' placeholder='例如 10.11.12.0/24' value=(undefined===network.routes[0]? '' : network.routes[0].target))
 
     .form-group
       label(for='poolStart') IP 分配池起始地址
-      input#poolStart.form-control(type='text' name='poolStart' placeholder='e.g. 10.11.12.1' value=(undefined===network.ipAssignmentPools[0]? '' : network.ipAssignmentPools[0].ipRangeStart))
+      input#poolStart.form-control(type='text' name='poolStart' placeholder='例如 10.11.12.1' value=(undefined===network.ipAssignmentPools[0]? '' : network.ipAssignmentPools[0].ipRangeStart))
 
     .form-group
       label(for='poolEnd') IP 分配池结束地址
-      input#poolEnd.form-control(type='text' name='poolEnd' placeholder='e.g. 10.11.12.254' value=(undefined===network.ipAssignmentPools[0]? '' : network.ipAssignmentPools[0].ipRangeEnd))
+      input#poolEnd.form-control(type='text' name='poolEnd' placeholder='例如 10.11.12.254' value=(undefined===network.ipAssignmentPools[0]? '' : network.ipAssignmentPools[0].ipRangeEnd))
 
     .form-group(style='padding-top: 10px')
       button.btn.btn-primary(type='submit') 应用
