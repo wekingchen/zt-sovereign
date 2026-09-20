@@ -32,18 +32,7 @@ jobs:
         shell: bash
         run: |
           cd /tmp/sovereign-base
-          set -a; source versions.env; set +a
-          docker build \
-            --build-arg "SOVEREIGN_VERSION=$SOVEREIGN_VERSION" \
-            --build-arg "PLANET_ZEROTIER_VERSION=$PLANET_ZEROTIER_VERSION" \
-            --build-arg "PLANET_ZEROTIER_SOURCE_REF=$PLANET_ZEROTIER_SOURCE_REF" \
-            --build-arg "CONTROLLER_ZEROTIER_VERSION=$CONTROLLER_ZEROTIER_VERSION" \
-            --build-arg "CONTROLLER_ZEROTIER_SOURCE_REF=$CONTROLLER_ZEROTIER_SOURCE_REF" \
-            --build-arg "ZTNET_VERSION=$ZTNET_VERSION" \
-            --build-arg "ZTNET_SOURCE_REF=$ZTNET_SOURCE_REF" \
-            --build-arg "NEXT_PUBLIC_APP_VERSION=$ZTNET_VERSION" \
-            --build-arg "NODEJS_IMAGE=$ZTNET_NODE_IMAGE" \
-            -t zerotier-sovereign:upgrade-old .
+          SOVEREIGN_IMAGE=zerotier-sovereign:upgrade-old ./scripts/build-local.sh
 
       - name: Build candidate image
         if: env.BASE_UNIFIED == 'true'

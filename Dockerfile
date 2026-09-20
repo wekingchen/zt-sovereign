@@ -23,11 +23,11 @@ RUN make -j"$(nproc)" \
     && strip --strip-unneeded zerotier-one
 
 # -----------------------------------------------------------------------------
-# Controller: compatibility branch that still contains the standalone controller.
+# Controller: current ZeroTier release with the source-available FileDB controller enabled.
 # -----------------------------------------------------------------------------
 FROM alpine:3.24 AS controller_builder
-ARG CONTROLLER_ZEROTIER_VERSION=1.14.2
-ARG CONTROLLER_ZEROTIER_SOURCE_REF=1.14.2
+ARG CONTROLLER_ZEROTIER_VERSION=1.16.2
+ARG CONTROLLER_ZEROTIER_SOURCE_REF=fc5c3ec22090b5b2a0f274e863651fe9ca489bf4
 RUN apk add --no-cache \
     bash build-base ca-certificates curl git linux-headers openssl-dev pkgconf
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
@@ -38,7 +38,7 @@ RUN git init . \
     && git fetch --depth 1 origin "${CONTROLLER_ZEROTIER_SOURCE_REF}" \
     && git checkout --detach FETCH_HEAD \
     && git rev-parse HEAD > /tmp/controller-zerotier-commit
-RUN make -j"$(nproc)" \
+RUN make -j"$(nproc)" ZT_NONFREE=1 \
     && strip --strip-unneeded zerotier-one
 
 # -----------------------------------------------------------------------------
@@ -88,9 +88,9 @@ RUN case "${TARGETPLATFORM}" in \
 # -----------------------------------------------------------------------------
 ARG NODEJS_IMAGE
 FROM ${NODEJS_IMAGE} AS runtime
-ARG SOVEREIGN_VERSION=0.4.0
+ARG SOVEREIGN_VERSION=0.4.1
 ARG PLANET_ZEROTIER_VERSION=1.16.2
-ARG CONTROLLER_ZEROTIER_VERSION=1.14.2
+ARG CONTROLLER_ZEROTIER_VERSION=1.16.2
 
 ENV NODE_ENV=production \
     PORT=3000 \
@@ -119,6 +119,7 @@ COPY --from=planet_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-planet/ze
 COPY --from=planet_builder /tmp/planet-zerotier-commit /usr/local/share/zerotier-sovereign/planet-zerotier-commit
 COPY --from=controller_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-controller/zerotier-one
 COPY --from=controller_builder /tmp/controller-zerotier-commit /usr/local/share/zerotier-sovereign/controller-zerotier-commit
+COPY --from=controller_builder /src/ZeroTierOne/nonfree/LICENSE.md /usr/local/share/zerotier-sovereign/ZEROTIER-NONFREE-LICENSE.md
 COPY --from=mkworld_source /src/.source-commit /usr/local/share/zerotier-sovereign/mkworld-source-commit
 RUN ln -s zerotier-one /opt/zerotier-planet/zerotier-idtool \
     && ln -s zerotier-one /opt/zerotier-planet/zerotier-cli \

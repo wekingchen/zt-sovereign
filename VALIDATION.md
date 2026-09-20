@@ -1,6 +1,6 @@
-# Validation status — v0.4.0 candidate
+# Validation status — v0.4.1 candidate
 
-v0.4.0 的发布判断以 GitHub Actions 的真实构建和运行结果为准，不以静态代码审查代替运行验证。
+v0.4.1 的发布判断以 GitHub Actions 的真实构建和运行结果为准，不以静态代码审查代替运行验证。
 
 ## 已建立的验证层
 
@@ -20,18 +20,18 @@ v0.4.0 的发布判断以 GitHub Actions 的真实构建和运行结果为准，
 CI 会在 GitHub 原生 amd64 Runner 上：
 
 - 从固定源码 commit 构建 PLANET 与 Controller；
+- Controller 1.16.2 使用 `ZT_NONFREE=1` 构建 standalone FileDB Controller；
 - 构建项目内维护的 ztncui；
 - 启动完整单容器运行栈；
 - 校验 PLANET 文件服务；
 - 通过真实 Controller REST API 创建/读取/删除测试 Network；
+- 通过 ztncui Controller client 创建、列出、读取、删除测试 Network；
 - 验证 ztncui 首次随机密码、强制改密及 bootstrap 文件删除；
-- 重启后检查 PLANET identity、World keys、Controller identity 和 ztncui 状态。
-
-ztncui-only 阶段已测得 amd64 未压缩运行镜像约 217 MiB；最终候选仍以对应 CI 的 footprint 输出为准。
+- 重启后检查 PLANET identity、World keys、Controller identity、Network 与 ztncui 状态。
 
 ### Upgrade Test
 
-PR 会分别构建 base 与 candidate，并真实执行 old -> new 切换。迁移状态通过 Docker daemon 从旧容器复制，以正确处理 root-owned 0600 密钥文件。
+PR 会分别构建 base 与 candidate，并真实执行 old -> new 切换。base 使用其自身的 `scripts/build-local.sh`，避免遗留 ZTNet 参数污染当前 ztncui-only 架构。
 
 候选必须验证：
 
@@ -46,13 +46,13 @@ PR 会分别构建 base 与 candidate，并真实执行 old -> new 切换。迁�
 
 main CI 通过后，Candidate workflow 使用 GitHub 原生 ARM64 Runner 构建并启动 ARM64 镜像，执行同一套集成与重启持久化测试，不使用 QEMU 作为运行验证。
 
-## v0.4.0 发布门槛
+## v0.4.1 发布门槛
 
-1. 直接面向 `main` 的 v0.4.0 candidate PR：CI 全绿。
-2. 同一 PR：Upgrade Test 全绿，证明真实 main/base -> v0.4.0 迁移。
+1. 直接面向 `main` 的 v0.4.1 candidate PR：CI 全绿。
+2. 同一 PR：Upgrade Test 全绿，证明真实 main/base -> v0.4.1 迁移。
 3. 合并 main 后：多架构 `candidate` 成功发布，ARM64 smoke 全绿。
-4. 在非关键节点手工试运行。
-5. 创建 `v0.4.0` tag。
+4. 个人研究环境手工试运行。
+5. 创建 `v0.4.1` tag。
 6. Release workflow 全绿并发布不可变镜像。
 7. 最后手工 Promote Stable。
 
