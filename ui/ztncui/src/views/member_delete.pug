@@ -9,22 +9,24 @@ block net_content
   if member.deleted
     .alert.alert-success
       strong #{member.name} (#{member.id}) 已删除
-    a.btn.btn-default(href=('/controller/network/' + network.nwid + '#members') name='networks' role='button') 成员列表
-
+    a.btn.btn-default(href=('/controller/network/' + network.nwid + '#members') name='networks' role='button') 返回成员列表
   else
-    .alert.alert-info
-      strong
-        ul
-          li 若要恢复已删除成员，让该成员重新加入网络即可。
-          li 删除成员后，该成员可能暂时重新出现在列表中，这是 ZeroTier 的已知行为。让该用户先离开网络即可。
-
-    form(method='POST' action='')
-      button.btn.btn-primary(type='submit', name='delete') 删除 #{member.name} (#{member.id})
-      = ' '
-      a.btn.btn-default(href='/controller/network/' + network.nwid + '#members',
-                                          name='cancel', role='button') 取消
+    .danger-panel
+      h4 删除成员
+      p 删除后，成员再次加入网络时可能重新出现在列表中；如需恢复，只需让该设备重新加入。
+      p
+        strong= member.name || '未命名成员'
+        |  · 
+        span.mono-text= member.id
+      form(method='POST' action='')
+        .action-bar
+          button.btn.btn-danger(type='submit', name='delete')
+            span.glyphicon.glyphicon-trash.nav-icon
+            | 确认删除
+          a.btn.btn-default(href='/controller/network/' + network.nwid + '#members' name='cancel' role='button') 取消
 
   if errors
-    ul
-      for err in errors
-        li!= err.msg
+    .alert.alert-warning
+      ul
+        for err in errors
+          li!= err.msg
