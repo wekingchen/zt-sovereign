@@ -39,7 +39,7 @@ for path in views.glob("*.pug"):
         errors.append(f"{path.name}: legacy table.table.table-responsive remains")
 
 # Preserve the existing member-management hooks and login field names.
-for token in (".authCheck", ".bridgeCheck", ".text", "id='members'"):
+for token in (".authCheck", ".bridgeCheck", ".text", "h3#members"):
     if token not in detail:
         errors.append(f"network_detail.pug lost functional hook {token}")
 
