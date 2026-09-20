@@ -31,6 +31,7 @@ jobs:
       - name: Ensure generated version fields are committed
         shell: bash
         run: |
+          ./scripts/sync-version-files.sh
           git diff --exit-code -- .env.example
 
   integration:
@@ -45,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -a; source versions.env; set +a
-          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF ZTNET_NODE_IMAGE; do
+          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
             echo "$v=${!v}" >> "$GITHUB_ENV"
           done
           if [[ "${{ github.event_name }}" == "push" ]]; then
@@ -75,7 +76,8 @@ jobs:
             PLANET_ZEROTIER_SOURCE_REF=${{ env.PLANET_ZEROTIER_SOURCE_REF }}
             CONTROLLER_ZEROTIER_VERSION=${{ env.CONTROLLER_ZEROTIER_VERSION }}
             CONTROLLER_ZEROTIER_SOURCE_REF=${{ env.CONTROLLER_ZEROTIER_SOURCE_REF }}
-            NODEJS_IMAGE=${{ env.ZTNET_NODE_IMAGE }}
+            MKWORLD_SOURCE_REF=${{ env.MKWORLD_SOURCE_REF }}
+            NODEJS_IMAGE=${{ env.NODEJS_IMAGE }}
           cache-from: |
             type=gha,scope=sovereign-amd64-main
             type=gha,scope=unified
@@ -102,11 +104,7 @@ jobs:
             docker run --rm --entrypoint /bin/bash zerotier-sovereign:local -lc '
               du -sh /opt/ztncui /opt/ztncui/node_modules /opt/zerotier-planet /opt/zerotier-controller /usr/local/lib/node_modules 2>/dev/null || true
               echo
-              if command -v dpkg-query >/dev/null 2>&1; then
-                dpkg-query -W -f="\${Installed-Size}\t\${Package}\n" 2>/dev/null | sort -nr | head -n 25
-              elif command -v apk >/dev/null 2>&1; then
-                apk info -v | sort | head -n 50
-              fi
+              apk info -v | sort | head -n 50
             '
             echo '~~~'
           } | tee "$report"
