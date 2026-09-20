@@ -41,7 +41,7 @@ controller_status() {
 
 process_status() {
   local run_dir=/run/sovereign name pid state
-  for name in planet controller planet-files ztnet; do
+  for name in planet controller planet-files ztnet ztncui; do
     pid=""
     [[ -s "$run_dir/$name.pid" ]] && pid=$(<"$run_dir/$name.pid")
     if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
