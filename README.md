@@ -4,14 +4,15 @@
 
 > **用途限制：本项目仅用于个人、非商业研究与学习。** 当前 Controller 使用 ZeroTier 1.16.2 的 source-available Controller 组件（`ZT_NONFREE=1`）；商业、组织生产或服务化使用不在本项目授权范围内。第三方组件仍分别遵循各自许可证，详见 `LICENSE` 与 `THIRD_PARTY_NOTICES.md`。
 
-v0.4.1 延续单业务容器架构，并将 Standalone Controller 升级到 ZeroTier 1.16.2：
+v0.4.2 将 ZeroTier 运行时进一步收敛为 **一份二进制、两个隔离进程**：
 
-- 自建 PLANET / Root：现代 ZeroTier 开放构建
-- Standalone Controller：独立身份、独立网络配置
+- 共享 ZeroTier 1.16.2 二进制：仅构建和存储一份，启用 `ZT_NONFREE=1`
+- PLANET / Root 进程：独立端口、identity 和数据目录
+- Standalone Controller 进程：独立端口、identity、网络配置和数据目录
 - ztncui：源码已纳入本仓库维护，作为唯一 Web 管理界面
 - PLANET 文件服务：用于受控分发自定义 `planet`
 
-v0.4.1 **不运行 ZTNet、Next.js、Prisma 或 PostgreSQL**。当前 amd64 的 ztncui-only 验证基线约为 **217 MiB 未压缩镜像体积**，CI 会在每次构建时继续报告实际体积。
+v0.4.2 **不运行 ZTNet、Next.js、Prisma 或 PostgreSQL**。ZeroTier 源码只编译一次，运行镜像也只保留一份 `zerotier-one`；CI 会继续报告实际镜像体积。
 
 ## 架构
 
@@ -36,26 +37,24 @@ Internet / ZeroTier clients
 +--------------------------------------------------+
 ```
 
-PLANET 与 Controller 始终是 **两套独立 ZeroTier 进程、两套 identity、两个持久化目录**。合并的是部署单元，不是信任身份。
+PLANET 与 Controller 始终是 **两套独立 ZeroTier 进程、两套 identity、两个持久化目录**，但两者执行同一个 `/opt/zerotier/zerotier-one` 文件。统一的是二进制和版本，不是进程或信任身份。
 
 ## 当前验证基线
 
 版本以 `versions.env` 为维护入口：
 
 ```env
-SOVEREIGN_VERSION=0.4.1
-PLANET_ZEROTIER_VERSION=1.16.2
-PLANET_ZEROTIER_SOURCE_REF=fc5c3ec22090b5b2a0f274e863651fe9ca489bf4
-CONTROLLER_ZEROTIER_VERSION=1.16.2
-CONTROLLER_ZEROTIER_SOURCE_REF=fc5c3ec22090b5b2a0f274e863651fe9ca489bf4
+SOVEREIGN_VERSION=0.4.2
+ZEROTIER_VERSION=1.16.2
+ZEROTIER_SOURCE_REF=fc5c3ec22090b5b2a0f274e863651fe9ca489bf4
 MKWORLD_SOURCE_REF=3ba175a682d03edd72516d830667ee08fe3cf262
 NODEJS_IMAGE=node:24-alpine3.24
 ```
 
 其中：
 
-- `PLANET_ZEROTIER_SOURCE_REF` 与 `CONTROLLER_ZEROTIER_SOURCE_REF` 固定到不可变 commit，保证可复现。
-- Controller 使用与 PLANET 相同的 ZeroTier 正式版本候选；Upstream Check 只负责开 PR，必须通过真实 ztncui CRUD、重启持久化和升级测试后才允许合并。
+- `ZEROTIER_SOURCE_REF` 固定到不可变 commit，保证共享二进制可复现。
+- PLANET 与 Controller 使用同一个 ZeroTier 正式版本候选；Upstream Check 只负责开 PR，必须通过真实 ztncui CRUD、重启持久化和升级测试后才允许合并。
 - `MKWORLD_SOURCE_REF` 只用于取得生成 PLANET world 的 `ztmkworld` helper；ZTNet Web 应用本身不进入运行镜像。
 - ztncui 源码位于 `ui/ztncui/`，不在镜像构建时动态拉取。
 
@@ -265,10 +264,10 @@ ui/ztncui/
 1. ShellCheck、Python/JavaScript syntax；
 2. 单元测试；
 3. 校验 `versions.env` 与 `.env.example` 同步；
-4. 原生 amd64 构建；
+4. 原生 amd64 构建一份共享 ZeroTier 二进制；
 5. 输出运行镜像体积与主要目录占用；
 6. 启动完整 ztncui-only stack；
-7. 通过真实 Controller API 做集成验证；
+7. 验证共享 ZeroTier 安装并通过真实 Controller API 做集成验证；
 8. 重启容器并验证持久化。
 
 ### Upgrade Test
@@ -279,9 +278,9 @@ ui/ztncui/
 
 ### Upstream Check
 
-每天自动检查 `zerotier/ZeroTierOne` 最新正式版本，并同时为 PLANET 与 Controller 生成候选版本更新。
+每天自动检查 `zerotier/ZeroTierOne` 最新正式版本，并更新唯一的 `ZEROTIER_VERSION` / `ZEROTIER_SOURCE_REF` 候选。
 
-自动化只会创建或刷新 PR，不会直接合并。Controller 候选必须通过真实 Controller API、ztncui CRUD、重启持久化与 Upgrade Test 后才可进入 main。ztncui 已由本仓库维护；`ztmkworld` helper 的来源 commit 单独固定、人工审查。
+自动化只会创建或刷新 PR，不会直接合并。共享 ZeroTier 候选必须通过真实 Controller API、ztncui CRUD、重启持久化与 Upgrade Test 后才可进入 main。ztncui 已由本仓库维护；`ztmkworld` helper 的来源 commit 单独固定、人工审查。
 
 ### Publish Candidate
 
@@ -305,17 +304,17 @@ ARM64 会在原生 ARM Runner 上执行实际集成与重启持久化测试，�
 
 ### Release
 
-v0.4.1 合并 main 并确认 candidate 后，创建与 `versions.env` 匹配的 tag：
+v0.4.2 合并 main 并确认 candidate 后，创建与 `versions.env` 匹配的 tag：
 
 ```bash
-git tag v0.4.1
-git push origin v0.4.1
+git tag v0.4.2
+git push origin v0.4.2
 ```
 
 Release workflow 会重新执行 amd64 验证，并原生构建 amd64 / arm64，最后发布：
 
 ```text
-goordonchen/zt-sovereign:v0.4.1
+goordonchen/zt-sovereign:v0.4.2
 goordonchen/zt-sovereign:sha-xxxxxxxxxxxx
 ```
 
@@ -324,13 +323,13 @@ goordonchen/zt-sovereign:sha-xxxxxxxxxxxx
 手工运行 `Promote Stable` workflow，将已经验证的明确版本移动为：
 
 ```text
-v0.4.1 -> stable
+v0.4.2 -> stable
 ```
 
 生产部署仍建议锁定明确版本：
 
 ```env
-SOVEREIGN_IMAGE=goordonchen/zt-sovereign:v0.4.1
+SOVEREIGN_IMAGE=goordonchen/zt-sovereign:v0.4.2
 ```
 
 而不是直接依赖会移动的 `stable` 标签。
