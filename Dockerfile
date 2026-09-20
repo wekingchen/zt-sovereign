@@ -23,7 +23,7 @@ RUN make -j"$(nproc)" \
     && strip --strip-unneeded zerotier-one
 
 # -----------------------------------------------------------------------------
-# Controller experiment: test current ZeroTier release with the standalone controller API.
+# Controller: current ZeroTier release with the source-available FileDB controller enabled.
 # -----------------------------------------------------------------------------
 FROM alpine:3.24 AS controller_builder
 ARG CONTROLLER_ZEROTIER_VERSION=1.16.2
@@ -88,9 +88,9 @@ RUN case "${TARGETPLATFORM}" in \
 # -----------------------------------------------------------------------------
 ARG NODEJS_IMAGE
 FROM ${NODEJS_IMAGE} AS runtime
-ARG SOVEREIGN_VERSION=0.4.0
+ARG SOVEREIGN_VERSION=0.4.1
 ARG PLANET_ZEROTIER_VERSION=1.16.2
-ARG CONTROLLER_ZEROTIER_VERSION=1.14.2
+ARG CONTROLLER_ZEROTIER_VERSION=1.16.2
 
 ENV NODE_ENV=production \
     PORT=3000 \
