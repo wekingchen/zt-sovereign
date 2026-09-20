@@ -7,7 +7,7 @@
     "devstart": "nodemon ./bin/www"
   },
   "dependencies": {
-    "argon2": "^0.19.3",
+    "argon2": "0.45.1",
     "body-parser": "^1.18.3",
     "bootstrap": "^3.4.1",
     "cookie-parser": "~1.4.3",
@@ -35,5 +35,8 @@
       "etc/**/*",
       "node_modules/jquery/dist/jquery.min.js"
     ]
+  },
+  "engines": {
+    "node": ">=24 <25"
   }
 }
