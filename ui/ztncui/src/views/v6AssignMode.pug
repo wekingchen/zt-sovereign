@@ -14,21 +14,28 @@ block net_content
     });
 
   form(method='POST' action='')
-    table.table.table-responsive.table-striped.table-hover
-      tr
-        td(width='3%')
+    .settings-stack
+      .setting-row
+        .setting-copy
+          h4 ZT 6plane
+          p.muted 每台设备分配一个可路由的 /80 IPv6 地址段。
+        .setting-control
           input#6planeCheckBox.checkbox(type='checkbox' checked=(network.v6AssignMode['6plane']? true : false))
-        td ZT 6plane（每台设备分配可路由 /80）
-      tr
-        td
+      .setting-row
+        .setting-copy
+          h4 ZT RFC4193
+          p.muted 每台设备分配一个 RFC4193 /128 IPv6 地址。
+        .setting-control
           input#rfc4193CheckBox.checkbox(type='checkbox' checked=(network.v6AssignMode['rfc4193']? true : false))
-        td ZT RFC4193（每台设备分配 /128）
-      tr
-        td
-          input#ztCheckBox.checkbox(type='checkbox' checked=(network.v6AssignMode['zt']? true : false))
-        td 从 IP 分配池自动分配
+      .setting-row
+        .setting-copy
+          h4 从 IP 分配池自动分配
+          p.muted 使用网络配置的 IPv6 地址池自动分配地址。
+        .setting-control
+          input#ztCheckBox.checkbox(type='checkbox' checked=(network.v6AssignMode.zt? true : false))
 
   if errors
-    ul
-      for err in errors
-        li!= err.msg
+    .alert.alert-warning
+      ul
+        for err in errors
+          li!= err.msg
