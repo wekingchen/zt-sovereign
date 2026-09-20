@@ -18,9 +18,8 @@ keys = [
     'PLANET_ZEROTIER_SOURCE_REF',
     'CONTROLLER_ZEROTIER_VERSION',
     'CONTROLLER_ZEROTIER_SOURCE_REF',
-    'ZTNET_VERSION',
-    'ZTNET_SOURCE_REF',
-    'ZTNET_NODE_IMAGE',
+    'MKWORLD_SOURCE_REF',
+    'NODEJS_IMAGE',
 ]
 lines = text.splitlines()
 for i, line in enumerate(lines):
