@@ -42,6 +42,7 @@ services:
       NEXTAUTH_URL: ${ZTNET_URL:?Set ZTNET_URL in .env}
       NEXTAUTH_SECRET: ${ZTNET_AUTH_SECRET:?Set ZTNET_AUTH_SECRET in .env}
       ZT_ADDR: http://127.0.0.1:${CONTROLLER_ZT_PORT:-9993}
+      ZTNCUI_PORT: 3002
     ports:
       # Public/reachable PLANET endpoint.
       - "${PLANET_BIND_IP:-0.0.0.0}:${PLANET_ZT_PORT:-9994}:${PLANET_ZT_PORT:-9994}/udp"
@@ -50,10 +51,12 @@ services:
       - "${CONTROLLER_BIND_IP:-0.0.0.0}:${CONTROLLER_ZT_PORT:-9993}:${CONTROLLER_ZT_PORT:-9993}/udp"
       # Management UI and PLANET download service stay loopback-only by default.
       - "${ZTNET_BIND_IP:-127.0.0.1}:${ZTNET_PORT:-3000}:3000/tcp"
+      - "${ZTNCUI_BIND_IP:-127.0.0.1}:${ZTNCUI_PORT:-3002}:3002/tcp"
       - "${PLANET_FILE_BIND_IP:-127.0.0.1}:${PLANET_FILE_PORT:-3001}:3001/tcp"
     volumes:
       - ./data/planet:/data/planet
       - ./data/controller:/data/controller
+      - ./data/ztncui:/data/ztncui
     stop_grace_period: 30s
 
   postgres:
