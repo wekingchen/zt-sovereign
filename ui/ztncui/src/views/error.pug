@@ -1,6 +1,12 @@
 extends controller_layout
 
 block content
-  h1= message
-  h2= error.status
-  pre #{error.stack}
+  .empty-state
+    span.glyphicon.glyphicon-warning-sign.empty-state-icon
+    h4= message || '页面处理失败'
+    if error && error.status
+      p.muted 错误状态：#{error.status}
+    p.muted 详细技术信息已记录在服务日志中。
+    a.btn.btn-default(href='/controller')
+      span.glyphicon.glyphicon-home.nav-icon
+      | 返回首页
