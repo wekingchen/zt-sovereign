@@ -47,6 +47,40 @@ docker compose exec -T sovereign curl -fsS \
   -X DELETE "http://127.0.0.1:9993/controller/network/$nwid" >/dev/null
 
 curl -fsS "http://127.0.0.1:${ZTNET_PORT:-3000}/" >/dev/null
+curl -fsS "http://127.0.0.1:${ZTNCUI_PORT:-3002}/" >/dev/null
+
+# Verify the vendored ztncui controller client against the real Controller API.
+docker compose exec -T sovereign sh -lc '
+  cd /opt/ztncui
+  export ZT_ADDR=http://127.0.0.1:9993
+  export ZT_TOKEN="$(cat /data/controller/one/authtoken.secret)"
+  node <<'"'"'JS'"'"'
+const zt = require("./controllers/zt");
+(async () => {
+  const created = await zt.network_create({name: "ztncui-ci-smoke"});
+  if (!created || !created.nwid) throw new Error("ztncui did not create a network");
+  const listed = await zt.network_list();
+  if (!listed.some((n) => n.nwid === created.nwid)) throw new Error("ztncui network missing from list");
+  const detail = await zt.network_detail(created.nwid);
+  if (detail.name !== "ztncui-ci-smoke") throw new Error("unexpected ztncui network detail");
+  await zt.network_delete(created.nwid);
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+JS
+'
+
+# Existing upstream default credentials must remain verifiable after the Node/argon2 upgrade.
+headers=$(mktemp)
+cookies=$(mktemp)
+curl -sS -D "$headers" -o /dev/null -c "$cookies" \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data 'username=admin&password=password' \
+  "http://127.0.0.1:${ZTNCUI_PORT:-3002}/login"
+grep -Eq '^HTTP/[^ ]+ 302' "$headers"
+grep -Eqi '^location: /users/admin/password' "$headers"
+rm -f "$headers" "$cookies"
 
 # Prisma migrations must have been applied to PostgreSQL.
 docker compose exec -T postgres psql -U "${POSTGRES_USER:-ztnet}" -d "${POSTGRES_DB:-ztnet}" -Atqc \
