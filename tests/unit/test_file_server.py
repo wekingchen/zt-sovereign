@@ -11,7 +11,7 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
-SERVER = ROOT / "rootfs/usr/local/bin/file_server.py"
+SERVER = ROOT / "rootfs/usr/local/bin/file_server.js"
 
 
 def free_port() -> int:
@@ -47,7 +47,7 @@ with tempfile.TemporaryDirectory() as td:
             "PLANET_FILE_KEY": "unit-test-key",
         }
     )
-    proc = subprocess.Popen([str(SERVER)], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.Popen(["node", str(SERVER)], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
         base_url = f"http://127.0.0.1:{port}"
         for _ in range(50):
