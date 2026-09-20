@@ -77,6 +77,22 @@ COPY --from=ztnet_source /src ./
 RUN sed -i 's/binaryTargets = .*/binaryTargets = ["native"]/' prisma/schema.prisma \
     && SKIP_ENV_VALIDATION=1 npm run build
 
+# -----------------------------------------------------------------------------
+# ztncui: project-maintained controller UI, built from vendored source.
+# Keep it separate from ZTNet during the migration experiment.
+# -----------------------------------------------------------------------------
+ARG NODEJS_IMAGE
+FROM ${NODEJS_IMAGE} AS ztncui_builder
+WORKDIR /app
+COPY ui/ztncui/src/package.json ./
+RUN npm install --omit=dev --no-audit --no-fund \
+    && npm cache clean --force \
+    && rm -rf /root/.npm
+COPY ui/ztncui/src ./
+RUN test -f app.js \
+    && test -f bin/www \
+    && node --check app.js \
+    && node --check bin/www
 FROM ztnet_base AS ztmkworld_builder
 ARG TARGETPLATFORM
 WORKDIR /app
@@ -142,6 +158,10 @@ COPY --from=ztnet_builder --chown=1001:1001 /app/.next/standalone ./
 COPY --from=ztnet_builder --chown=1001:1001 /app/.next/static ./.next/static
 COPY --from=ztnet_builder --chown=1001:1001 /app/prisma ./prisma
 COPY --from=ztnet_builder --chown=1001:1001 /app/init-db.sh ./init-db.sh
+
+# ztncui runs side-by-side on port 3002 during migration validation.
+COPY --from=ztncui_builder /app /opt/ztncui
+COPY ui/ztncui/LICENSE /opt/ztncui/LICENSE
 COPY --from=ztmkworld_builder /usr/local/bin/ztmkworld /usr/local/bin/ztmkworld
 RUN sed -i 's#npx prisma#/app/node_modules/.bin/prisma#g' /app/init-db.sh \
     && chmod +x /app/init-db.sh \
@@ -176,7 +196,7 @@ LABEL org.opencontainers.image.title="ZeroTier Sovereign" \
       org.opencontainers.image.description="Self-owned ZeroTier PLANET + standalone Controller + ZTNet UI" \
       org.opencontainers.image.version="${SOVEREIGN_VERSION}"
 
-EXPOSE 9994/tcp 9994/udp 9993/udp 3000/tcp 3001/tcp
+EXPOSE 9994/tcp 9994/udp 9993/udp 3000/tcp 3001/tcp 3002/tcp
 HEALTHCHECK --interval=30s --timeout=8s --start-period=120s --retries=5 \
   CMD ["/usr/local/bin/sovereign-healthcheck"]
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/sovereign-entrypoint"]
