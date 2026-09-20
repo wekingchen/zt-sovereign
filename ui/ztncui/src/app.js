@@ -22,7 +22,7 @@ const zt_controller = require('./routes/zt_controller');
 
 const app = express();
 
-const session_secret = Math.random().toString(36).substring(2,12);
+const session_secret = process.env.ZTNCUI_SESSION_SECRET || Math.random().toString(36).substring(2,12);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
