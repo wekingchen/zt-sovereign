@@ -16,4 +16,11 @@ for kv in \
   "NODEJS_IMAGE=$NODEJS_IMAGE"; do
   grep -Fxq "$kv" .env.example || { echo "missing synced pin: $kv" >&2; exit 1; }
 done
+grep -Fq '/opt/zerotier/zerotier-one' rootfs/usr/local/bin/run-planet
+grep -Fq '/opt/zerotier/zerotier-one' rootfs/usr/local/bin/run-controller
+grep -Fq '/opt/zerotier/zerotier-idtool' rootfs/usr/local/bin/planetctl
+if grep -R -E '/opt/zerotier-(planet|controller)' Dockerfile rootfs/usr/local/bin >/dev/null; then
+  echo "legacy split ZeroTier installation path remains" >&2
+  exit 1
+fi
 echo "PASS test_version_sync"
