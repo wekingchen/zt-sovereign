@@ -70,15 +70,43 @@ const zt = require("./controllers/zt");
 JS
 '
 
-# Existing upstream default credentials must remain verifiable after the Node/argon2 upgrade.
+# First boot must use a unique bootstrap password, never upstream admin/password.
+initial_password=$(docker compose exec -T sovereign sovereignctl ztncui-initial-password | tr -d '\r\n')
+[[ ${#initial_password} -ge 20 ]]
+
 headers=$(mktemp)
 cookies=$(mktemp)
 curl -sS -D "$headers" -o /dev/null -c "$cookies" \
   -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data 'username=admin&password=password' \
+  --data-urlencode 'username=admin' \
+  --data-urlencode "password=$initial_password" \
   "http://127.0.0.1:${ZTNCUI_PORT:-3000}/login"
 grep -Eq '^HTTP/[^ ]+ 302' "$headers"
 grep -Eqi '^location: /users/admin/password' "$headers"
+
+new_password='Sovereign-CI-Admin-Change-2026!'
+curl -fsS -b "$cookies" -c "$cookies" \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'username=admin' \
+  --data-urlencode "password1=$new_password" \
+  --data-urlencode "password2=$new_password" \
+  "http://127.0.0.1:${ZTNCUI_PORT:-3000}/users/admin/password" >/dev/null
+
+if docker compose exec -T sovereign sovereignctl ztncui-initial-password >/dev/null 2>&1; then
+  echo >&2 "bootstrap password file still exists after admin password change"
+  exit 1
+fi
+
 rm -f "$headers" "$cookies"
+headers=$(mktemp)
+curl -sS -D "$headers" -o /dev/null \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'username=admin' \
+  --data-urlencode "password=$new_password" \
+  "http://127.0.0.1:${ZTNCUI_PORT:-3000}/login"
+grep -Eq '^HTTP/[^ ]+ 302' "$headers"
+grep -Eqi '^location: /controller' "$headers"
+rm -f "$headers"
+
 
 echo "PASS integration smoke"
