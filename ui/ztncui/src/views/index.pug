@@ -6,17 +6,35 @@
 extends controller_layout
 
 block content
-  h1!= title
-
-  h2
-    a(href='https://zerotier.com' target='_blank') ZeroTier 
-    | 网络控制器管理界面，原项目：
-    a(href='https://key-networks.com' target='_blank') Key Networks
-
   if error
-     b #{error}
+    .alert.alert-danger
+      strong #{error}
   else
-    h4 当前网络控制器的 ZeroTier 地址：<b>#{zt_status.address}</b>
-    h4 ZeroTier 版本：<b>#{zt_status.version}</b>
-    h4
-      a(href='/controller/networks') 查看此控制器上的全部网络
+    .hero-panel
+      .hero-copy
+        .eyebrow ZERO TIER SOVEREIGN
+        h1 网络控制台
+        p.muted 自主管理 PLANET、Controller 与虚拟网络成员。
+      .hero-badge
+        span.glyphicon.glyphicon-ok-circle
+        | Controller 在线
+
+    .metric-grid
+      .metric-card
+        .metric-icon
+          span.glyphicon.glyphicon-qrcode
+        .metric-content
+          span.metric-label Controller 地址
+          strong.mono-text #{zt_status.address}
+      .metric-card
+        .metric-icon
+          span.glyphicon.glyphicon-cog
+        .metric-content
+          span.metric-label ZeroTier 版本
+          strong #{zt_status.version}
+      .metric-card.metric-card-action
+        .metric-icon
+          span.glyphicon.glyphicon-globe
+        .metric-content
+          span.metric-label 网络管理
+          a(href='/controller/networks') 查看全部网络

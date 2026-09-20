@@ -6,15 +6,23 @@
 extends network_layout
 
 block net_content
-  h4
-    | 网络中的成员 #{member.name} (#{member.address})
+  .section-heading
+    div
+      h3 成员详情
+      p.muted
+        = member.name || '未命名成员'
+        |  · 
+        span.mono-text= member.address
 
-  each value, key in member
-    .row
-      .col-sm-2
-        a(href=('/controller/network/' + member.nwid + '/member/' + member.address + '/' + key)) #{zhLabel(key)}：
-      .col-sm-10
-        +json_value(value)
+  .detail-grid
+    each value, key in member
+      .detail-row
+        .detail-label
+          a(href=('/controller/network/' + member.nwid + '/member/' + member.address + '/' + key)) #{zhLabel(key)}
+        .detail-value
+          +json_value(value)
 
-  a.btn.btn-default(href=('/controller/network/' + member.nwid + "#members") name='networks' role='button' style='margin-top: 10px;')
-    | 成员列表
+  .action-bar(style='margin-top: 22px;')
+    a.btn.btn-default(href=('/controller/network/' + member.nwid + "#members") name='networks' role='button')
+      span.glyphicon.glyphicon-chevron-left.nav-icon
+      | 返回成员列表

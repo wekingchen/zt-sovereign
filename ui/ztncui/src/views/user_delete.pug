@@ -9,24 +9,27 @@ block users_content
   if user === null
     .alert.alert-warning
       strong 用户不存在
-
   else if self_delete === true
     .alert.alert-danger
       strong 不能删除当前登录用户
-
   else if deleted
     .alert.alert-success
       strong #{user.name} 已删除
-
   else
-    .alert.alert-danger
-      strong 警告：删除管理员用户后无法恢复
-    form(method='POST' action='')
-      button.btn.btn-danger(type='submit', name='delete' value='delete') 删除 #{user.name}
-      = ' '
-      a.btn.btn-default(href='/users', name='cancel', role='button') 取消
+    .danger-panel
+      h4 删除管理员
+      p 删除管理员账号后无法恢复，请确认该账号不再需要使用。
+      p
+        strong= user.name
+      form(method='POST' action='')
+        .action-bar
+          button.btn.btn-danger(type='submit', name='delete' value='delete')
+            span.glyphicon.glyphicon-trash.nav-icon
+            | 确认删除
+          a.btn.btn-default(href='/users', name='cancel', role='button') 取消
 
   if errors
-    ul
-      for err in errors
-        li!= err.msg
+    .alert.alert-warning
+      ul
+        for err in errors
+          li!= err.msg

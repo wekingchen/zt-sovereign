@@ -6,8 +6,16 @@
 extends login_layout
 
 block login_content
-  h1!= title
+  .auth-brand
+    span.brand-mark
+      i.glyphicon.glyphicon-random
+    div
+      h1 ZeroTier Sovereign
+      p.auth-intro 自托管网络控制台
 
-  h2
-    a(href='https://zerotier.com' target='_blank') ZeroTier 
-    | 网络控制器管理界面
+  p.muted 通过本地 Controller 管理 ZeroTier 网络、成员、路由与地址分配。
+
+  .auth-actions
+    a.btn.btn-primary.btn-block(href='/login')
+      span.glyphicon.glyphicon-log-in.nav-icon
+      | 进入控制台

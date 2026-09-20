@@ -4,15 +4,15 @@
 
 > **用途限制：本项目仅用于个人、非商业研究与学习。** 当前 Controller 使用 ZeroTier 1.16.2 的 source-available Controller 组件（`ZT_NONFREE=1`）；商业、组织生产或服务化使用不在本项目授权范围内。第三方组件仍分别遵循各自许可证，详见 `LICENSE` 与 `THIRD_PARTY_NOTICES.md`。
 
-v0.5.0 在 v0.4.2 的单二进制双实例架构上，将项目维护的 ztncui 管理界面完整切换为简体中文：
+v0.6.0 在 v0.5.0 简体中文界面的基础上，对项目维护的 ztncui 进行完整现代化改造，同时保持业务逻辑、Controller API、路由和持久化结构不变：
 
 - 共享 ZeroTier 1.16.2 二进制：仅构建和存储一份，启用 `ZT_NONFREE=1`
 - PLANET / Root 进程：独立端口、identity 和数据目录
 - Standalone Controller 进程：独立端口、identity、网络配置和数据目录
-- ztncui：源码已纳入本仓库维护，作为唯一 Web 管理界面；导航、表单、状态、错误提示与常见 ZeroTier 字段均已汉化
+- ztncui：源码已纳入本仓库维护，作为唯一 Web 管理界面；采用现代响应式后台设计，支持桌面端和移动端
 - PLANET 文件服务：用于受控分发自定义 `planet`
 
-v0.5.0 **不运行 ZTNet、Next.js、Prisma 或 PostgreSQL**。ZeroTier 仍只编译一次并保留一份 `zerotier-one`；ztncui 中文化只修改显示层，不改变 ZeroTier API、URL、字段名或持久化结构。
+v0.6.0 **不运行 ZTNet、Next.js、Prisma 或 PostgreSQL**。ZeroTier 仍只编译一次并保留一份 `zerotier-one`；本次 UI 改造仅调整 Pug 展示结构与 CSS 设计系统，不改变 ZeroTier API、表单字段名、URL、Controller 行为或持久化结构。
 
 ## 架构
 
@@ -44,7 +44,7 @@ PLANET 与 Controller 始终是 **两套独立 ZeroTier 进程、两套 identity
 版本以 `versions.env` 为维护入口：
 
 ```env
-SOVEREIGN_VERSION=0.5.0
+SOVEREIGN_VERSION=0.6.0
 ZEROTIER_VERSION=1.16.2
 ZEROTIER_SOURCE_REF=fc5c3ec22090b5b2a0f274e863651fe9ca489bf4
 MKWORLD_SOURCE_REF=3ba175a682d03edd72516d830667ee08fe3cf262
@@ -94,6 +94,21 @@ docker compose up -d
 docker exec zerotier-sovereign sovereignctl status
 docker exec zerotier-sovereign sovereignctl version
 ```
+
+## ztncui 现代化界面
+
+v0.6.0 起，ztncui 在完整简体中文基础上升级为现代响应式控制台：
+
+- 深色品牌导航、统一内容卡片、现代按钮/表单/告警和状态徽章；
+- 首页改为 Controller 状态仪表盘；
+- 网络列表、网络详情、成员状态、路由、DNS、地址池、管理员等页面统一视觉体系；
+- 桌面端采用最大 1440px 的内容布局，移动端针对导航、按钮、表单、详情字段和表格重新排版；
+- 宽表格使用横向触控滚动，避免手机端挤压字段；
+- 常用触控控件最小高度约 44px；
+- 删除、空状态、错误页采用明确的视觉语义；
+- 不更改现有业务逻辑、API、路由、表单字段名与持久化格式。
+
+CI 中的 `test_ztncui_modern_ui.py` 会检查响应式 viewport、核心设计组件、表格响应式结构和关键功能钩子，Docker 构建还会编译所有 Pug 模板。
 
 ## ztncui 简体中文界面
 
@@ -316,17 +331,17 @@ ARM64 会在原生 ARM Runner 上执行实际集成与重启持久化测试，�
 
 ### Release
 
-v0.5.0 合并 main 并确认 candidate 后，创建与 `versions.env` 匹配的 tag：
+v0.6.0 合并 main 并确认 candidate 后，创建与 `versions.env` 匹配的 tag：
 
 ```bash
-git tag v0.5.0
-git push origin v0.5.0
+git tag v0.6.0
+git push origin v0.6.0
 ```
 
 Release workflow 会重新执行 amd64 验证，并原生构建 amd64 / arm64，最后发布：
 
 ```text
-goordonchen/zt-sovereign:v0.5.0
+goordonchen/zt-sovereign:v0.6.0
 goordonchen/zt-sovereign:sha-xxxxxxxxxxxx
 ```
 
@@ -335,13 +350,13 @@ goordonchen/zt-sovereign:sha-xxxxxxxxxxxx
 手工运行 `Promote Stable` workflow，将已经验证的明确版本移动为：
 
 ```text
-v0.5.0 -> stable
+v0.6.0 -> stable
 ```
 
 生产部署仍建议锁定明确版本：
 
 ```env
-SOVEREIGN_IMAGE=goordonchen/zt-sovereign:v0.5.0
+SOVEREIGN_IMAGE=goordonchen/zt-sovereign:v0.6.0
 ```
 
 而不是直接依赖会移动的 `stable` 标签。

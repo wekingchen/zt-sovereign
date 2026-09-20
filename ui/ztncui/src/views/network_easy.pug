@@ -59,8 +59,9 @@ block net_content
     .form-group
       button.btn.btn-link.float-right(type='button' data-toggle='collapse' data-target='#help') 帮助
       .collapse(id='help')
-        p 请注意：此快速设置工具目前仅支持 IPv4。
-        p 可以点击下方按钮自动生成随机网络地址，也可以手动填写 CIDR。IP 分配池会自动计算，计算结果仍可手动调整。
+        .help-panel
+          p 请注意：此快速设置工具目前仅支持 IPv4。
+          p 可以点击下方按钮自动生成随机网络地址，也可以手动填写 CIDR。IP 分配池会自动计算，计算结果仍可手动调整.
 
     .form-group
       button.btn.btn-primary(id='genIPv4' type='button' onclick='randomIPv4()') 自动生成网络地址
@@ -77,12 +78,12 @@ block net_content
       label(for='poolEnd') IP 分配池结束地址
       input#poolEnd.form-control(type='text' name='poolEnd' placeholder='例如 10.11.12.254' value=(undefined===network.ipAssignmentPools[0]? '' : network.ipAssignmentPools[0].ipRangeEnd))
 
-    .form-group(style='padding-top: 10px')
+    .action-bar
       button.btn.btn-primary(type='submit') 应用
-      = ' '
       a.btn.btn-default(href=('/controller/network/' + network.nwid) name='cancel' role='button') 取消
 
     if errors
-      ul
-        for err in errors
-          li!= err.msg
+      .alert.alert-warning
+        ul
+          for err in errors
+            li!= err.msg

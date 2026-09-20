@@ -7,51 +7,41 @@ extends network_layout
 
 block net_content
   - const dns = network.dns || {};
-  if (!dns.domain && !(dns.servers && dns.servers.length > 0))
-    .row
-      .col-sm-12
-        b 当前网络未配置 DNS。
-  else
-    .row
-      .col-sm-2
-        b 域名：
-      .col-sm-10
-        p= dns.domain
-    .row
-      .col-sm-2
-        b DNS 服务器：
-      .col-sm-10
-        .row
+
+  .info-list
+    .info-line
+      strong 当前域名
+      span= dns.domain || '未配置'
+    .info-line
+      strong DNS 服务器
+      div
+        if dns.servers && dns.servers.length
           each server in dns.servers
-            .col-sm-12= server
+            div.mono-text= server
+        else
+          span.muted 未配置
 
-  .row
-    .col-sm-12
+  .section-heading
+    div
       h3 修改 DNS 配置
+      p.muted 为此网络设置搜索域和 DNS 服务器
 
-  form(method='POST' action='')
-    .form-group.row
-      .col-sm-12
-        label(for='domain') 域名：
-      .col-sm-12
-        input#domain.form-control(type='text' name='domain' value=dns.domain)
+  form.form-narrow(method='POST' action='')
+    .form-group
+      label(for='domain') 域名
+      input#domain.form-control(type='text' name='domain' value=dns.domain placeholder='例如 corp.example.com')
 
-    .form-group.row
-      .col-sm-12
-        label(for='servers') DNS 服务器：
-      .col-sm-12
-        textarea#servers.form-control(type='text' name='servers' placeholder='每行一个 IP 地址')
-          = !dns.servers ? '' : dns.servers.join('\n')
+    .form-group
+      label(for='servers') DNS 服务器
+      textarea#servers.form-control(type='text' name='servers' placeholder='每行一个 IP 地址')
+        = !dns.servers ? '' : dns.servers.join('\n')
 
-    .form-group.row
-      .col-sm-12
-        button.btn.btn-primary(type='submit') 保存
-        = ' '
-        a.btn.btn-default(href=('/controller/network/' + network.nwid) name='cancel' role='button') 取消
+    .action-bar
+      button.btn.btn-primary(type='submit') 保存
+      a.btn.btn-default(href=('/controller/network/' + network.nwid) name='cancel' role='button') 取消
 
   if errors
-    .row
-      .col-sm-12
-        ul
-          for err in errors
-            li!= err.msg
+    .alert.alert-warning
+      ul
+        for err in errors
+          li!= err.msg

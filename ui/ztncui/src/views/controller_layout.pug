@@ -12,7 +12,7 @@ block nav_items
   +nav_item('add_network', '新建网络', '/controller/network/create')
 
 block body_content
-  .container(style='margin: 50px auto 20px')
-    .row
-      .col-sm-12
+  main.app-main
+    .container.app-container
+      .page-surface
         block content

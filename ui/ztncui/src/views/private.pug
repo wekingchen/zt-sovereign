@@ -14,13 +14,15 @@ block net_content
     });
 
   form(method='POST' action='')
-    table.table.table-responsive.table-striped.table-hover
-      tr
-        td(width='3%')
-          input#privateCheckBox.checkbox(type='checkbox' checked=(network.private? true : false))
-        td 启用访问控制。警告：关闭后将无法取消网络成员的授权。仅在明确了解影响时关闭此选项。
+    .setting-row
+      .setting-copy
+        h4 启用访问控制
+        p.muted 开启后可逐个授权或取消授权网络成员。关闭后将无法取消成员授权，仅在明确了解影响时使用。
+      .setting-control
+        input#privateCheckBox.checkbox(type='checkbox' checked=(network.private? true : false))
 
   if errors
-    ul
-      for err in errors
-        li!= err.msg
+    .alert.alert-warning
+      ul
+        for err in errors
+          li!= err.msg

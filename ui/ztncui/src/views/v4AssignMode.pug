@@ -14,13 +14,15 @@ block net_content
     });
 
   form(method='POST' action='')
-    table.table.table-responsive.table-striped.table-hover
-      tr
-        td(width='3%')
-          input#v4AssignModeCheckBox.checkbox(type='checkbox' checked=(network.v4AssignMode.zt? true : false))
-        td 从 IP 分配池自动分配
+    .setting-row
+      .setting-copy
+        h4 IPv4 自动分配
+        p.muted 从当前网络的 IP 分配池中自动为成员分配 IPv4 地址。
+      .setting-control
+        input#v4AssignModeCheckBox.checkbox(type='checkbox' checked=(network.v4AssignMode.zt? true : false))
 
   if errors
-    ul
-      for err in errors
-        li!= err.msg
+    .alert.alert-warning
+      ul
+        for err in errors
+          li!= err.msg

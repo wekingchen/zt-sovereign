@@ -7,11 +7,12 @@ extends head_layout
 
 block nav_login
   a(href='/login')
-    span.glyphicon.glyphicon-log-in
-    |  登录
+    span.glyphicon.glyphicon-log-in.nav-icon
+    | 登录
 
 block body_content
-  .container(style='margin-top:50px')
-    .row
-      .col-sm-12
-        block login_content
+  main.app-main
+    .container.app-container
+      .auth-shell
+        .auth-card
+          block login_content

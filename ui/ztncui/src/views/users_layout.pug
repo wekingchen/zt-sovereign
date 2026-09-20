@@ -12,11 +12,12 @@ block nav_items
   +nav_item('create_user', '新建管理员', '/users/create')
 
 block body_content
-  .container(style='margin-top:50px')
-    .row
-      .col-sm-12
+  main.app-main
+    .container.app-container
+      .page-surface
         if error
-           b #{error}
+          .alert.alert-danger
+            strong #{error}
         else
           h1= title
           block users_content

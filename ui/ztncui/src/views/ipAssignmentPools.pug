@@ -6,47 +6,42 @@
 extends network_layout
 
 block net_content
-  .row
-    .col-sm-12
-      table.table.table-responsive.table-striped.table-hover
+  .table-responsive
+    table.table.table-striped.table-hover
+      thead
         tr
           th
           th 起始 IP
           th 结束 IP
-          each ipAssignmentPool in network.ipAssignmentPools
-            tr
-              td(width='3%')
-                a(href='/controller/network/' + network.nwid + '/ipAssignmentPools/' + ipAssignmentPool.ipRangeStart + '/' + ipAssignmentPool.ipRangeEnd + '/delete')
-                  i.glyphicon.glyphicon-trash
-              td= ipAssignmentPool.ipRangeStart
-              td= ipAssignmentPool.ipRangeEnd
+      tbody
+        each ipAssignmentPool in network.ipAssignmentPools
+          tr
+            td
+              a.btn.btn-link.btn-sm(href='/controller/network/' + network.nwid + '/ipAssignmentPools/' + ipAssignmentPool.ipRangeStart + '/' + ipAssignmentPool.ipRangeEnd + '/delete' title='删除 IP 分配池')
+                i.glyphicon.glyphicon-trash
+            td.mono-text= ipAssignmentPool.ipRangeStart
+            td.mono-text= ipAssignmentPool.ipRangeEnd
 
-  .row
-    .col-sm-12
+  .section-heading
+    div
       h3 添加 IP 分配池
+      p.muted 为成员自动分配地址范围
 
   form(method='POST' action='/controller/network/' + network.nwid + '/ipAssignmentPools')
-    .form-group.row
-      .col-sm-2
-        label(for='ipRangeStart') 起始 IP：
-      .col-sm-12
-        input#ipRangeStart.form-control(type='text' name='ipRangeStart' placeholder='起始 IP' value=(undefined===ipAssignmentPool? '' : ipAssignmentPool.ipRangeStart))
+    .form-group
+      label(for='ipRangeStart') 起始 IP
+      input#ipRangeStart.form-control(type='text' name='ipRangeStart' placeholder='起始 IP' value=(undefined===ipAssignmentPool? '' : ipAssignmentPool.ipRangeStart))
 
-    .form-group.row
-      .col-sm-2
-        label(for='ipRangeEnd') 结束 IP：
-      .col-sm-12
-        input#ipRangeEnd.form-control(type='text' name='ipRangeEnd' placeholder='结束 IP' value=(undefined===ipAssignmentPool? '' : ipAssignmentPool.ipRangeEnd))
+    .form-group
+      label(for='ipRangeEnd') 结束 IP
+      input#ipRangeEnd.form-control(type='text' name='ipRangeEnd' placeholder='结束 IP' value=(undefined===ipAssignmentPool? '' : ipAssignmentPool.ipRangeEnd))
 
-    .form-group.row
-      .col-sm-12
-        button.btn.btn-primary(type='submit') 保存
-        = ' '
-        a.btn.btn-default(href='/controller/network/' + network.nwid name='cancel' role='button') 取消
+    .action-bar
+      button.btn.btn-primary(type='submit') 保存
+      a.btn.btn-default(href='/controller/network/' + network.nwid name='cancel' role='button') 取消
 
   if errors
-    .row
-      .col-sm-12
-        ul
-          for err in errors
-            li!= err.msg
+    .alert.alert-warning
+      ul
+        for err in errors
+          li!= err.msg
