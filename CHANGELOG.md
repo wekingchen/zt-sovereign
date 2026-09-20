@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.1
+
+- Standalone Controller 从 ZeroTier 1.14.2 升级到 1.16.2，与 PLANET 使用同一正式版本基线。
+- Controller 构建启用 `ZT_NONFREE=1`，恢复 1.16.2 中位于 `nonfree/controller` 的 FileDB Controller API。
+- 真实集成测试确认 ztncui 0.8.14 可在 ZeroTier 1.16.2 上创建、列出、读取和删除 Network，并通过重启持久化测试。
+- 项目用途明确调整为个人、非商业研究与学习；增加根目录 Personal Non-Commercial Research License，并保留 ZeroTier Controller source-available 许可文本。
+- Upgrade Test 修复为使用 base 分支自己的 `scripts/build-local.sh`，移除已退役的 ZTNet 构建参数。
+- Upstream Check 改为同时提出 PLANET 与 Controller 的最新 ZeroTier 正式版本候选，但仍必须通过 CI 后人工合并。
+
+
 ## v0.4.0
 
 - 将运行架构收敛为单个 `zerotier-sovereign` 容器：PLANET + Standalone Controller + 项目维护的 ztncui。
