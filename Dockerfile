@@ -23,11 +23,11 @@ RUN make -j"$(nproc)" \
     && strip --strip-unneeded zerotier-one
 
 # -----------------------------------------------------------------------------
-# Controller: compatibility branch that still contains the standalone controller.
+# Controller experiment: test current ZeroTier release with the standalone controller API.
 # -----------------------------------------------------------------------------
 FROM alpine:3.24 AS controller_builder
-ARG CONTROLLER_ZEROTIER_VERSION=1.14.2
-ARG CONTROLLER_ZEROTIER_SOURCE_REF=1.14.2
+ARG CONTROLLER_ZEROTIER_VERSION=1.16.2
+ARG CONTROLLER_ZEROTIER_SOURCE_REF=fc5c3ec22090b5b2a0f274e863651fe9ca489bf4
 RUN apk add --no-cache \
     bash build-base ca-certificates curl git linux-headers openssl-dev pkgconf
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
