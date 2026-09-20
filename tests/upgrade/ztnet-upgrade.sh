@@ -1,44 +1,89 @@
 #!/usr/bin/env bash
-# CI-only upgrade smoke test. Reuses the same PostgreSQL + persistent ZeroTier data
-# while switching from OLD_IMAGE to NEW_IMAGE.
+# CI-only migration smoke test. Starts the current base stack (ZTNet + PostgreSQL
+# + side-by-side ztncui), then switches to the ztncui-only candidate while
+# preserving PLANET, Controller and ztncui state.
 set -Eeuo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+BASE_ROOT=/tmp/sovereign-base
 cd "$ROOT"
+
 : "${CI:?Refusing to run destructive upgrade test outside CI}"
 : "${OLD_IMAGE:?OLD_IMAGE required}"
 : "${NEW_IMAGE:?NEW_IMAGE required}"
 
 wait_healthy() {
+  local name=$1
   for _ in $(seq 1 180); do
-    state=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' zerotier-sovereign 2>/dev/null || true)
+    state=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$name" 2>/dev/null || true)
     [[ "$state" == healthy ]] && return 0
     sleep 2
   done
-  docker compose logs --no-color --tail=300 || true
+  docker logs --tail=300 "$name" 2>/dev/null || true
   return 1
 }
 
-rm -rf data
-mkdir -p data/planet/{one,world,dist,config} data/controller/one data/postgres
+hash_file() {
+  local name=$1 path=$2
+  docker exec "$name" sha256sum "$path" | awk '{print $1}'
+}
 
-export SOVEREIGN_IMAGE="$OLD_IMAGE"
-docker compose up -d --no-build postgres sovereign
-wait_healthy
-before=$(docker compose exec -T postgres psql -U "${POSTGRES_USER:-ztnet}" -d "${POSTGRES_DB:-ztnet}" -Atqc 'select count(*) from "_prisma_migrations";')
-# A project-owned sentinel verifies the DB volume itself survives the application image switch.
-docker compose exec -T postgres psql -U "${POSTGRES_USER:-ztnet}" -d "${POSTGRES_DB:-ztnet}" -v ON_ERROR_STOP=1 -c \
-  'create table if not exists sovereign_upgrade_probe(id integer primary key, note text); insert into sovereign_upgrade_probe values (1, '\''persist-me'\'') on conflict (id) do update set note=excluded.note;' >/dev/null
+rm -rf "$ROOT/data" "$BASE_ROOT/data"
+mkdir -p "$BASE_ROOT/data/planet"/{one,world,dist,config} "$BASE_ROOT/data/controller/one" "$BASE_ROOT/data/postgres" "$BASE_ROOT/data/ztncui"
 
-docker compose stop sovereign
+# Start the old/base architecture from its own worktree so its PostgreSQL service
+# and environment contract remain exactly as they were.
+cp "$ROOT/.env" "$BASE_ROOT/.env"
+sed -i 's/^SOVEREIGN_IMAGE=.*/SOVEREIGN_IMAGE=zerotier-sovereign:upgrade-old/' "$BASE_ROOT/.env"
+grep -q '^POSTGRES_PASSWORD=' "$BASE_ROOT/.env" || echo 'POSTGRES_PASSWORD=upgrade-ci-only-password' >> "$BASE_ROOT/.env"
+grep -q '^ZTNET_AUTH_SECRET=' "$BASE_ROOT/.env" || echo 'ZTNET_AUTH_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' >> "$BASE_ROOT/.env"
+grep -q '^ZTNET_URL=' "$BASE_ROOT/.env" || echo 'ZTNET_URL=http://127.0.0.1:3000' >> "$BASE_ROOT/.env"
+
+(
+  cd "$BASE_ROOT"
+  docker compose up -d --no-build
+)
+wait_healthy zerotier-sovereign
+
+root_before=$(hash_file zerotier-sovereign /data/planet/one/identity.secret)
+current_before=$(hash_file zerotier-sovereign /data/planet/world/current.c25519)
+previous_before=$(hash_file zerotier-sovereign /data/planet/world/previous.c25519)
+controller_before=$(hash_file zerotier-sovereign /data/controller/one/identity.secret)
+passwd_before=$(hash_file zerotier-sovereign /data/ztncui/passwd)
+session_before=$(hash_file zerotier-sovereign /data/ztncui/session.secret)
+
+token=$(docker exec zerotier-sovereign sh -lc 'cat /data/controller/one/authtoken.secret' | tr -d '\r\n')
+status=$(docker exec zerotier-sovereign curl -fsS -H "X-ZT1-Auth: $token" http://127.0.0.1:9993/status)
+addr=$(printf '%s' "$status" | python3 -c 'import json,sys; print(json.load(sys.stdin)["address"])')
+nwid="${addr}c1a0ee"
+docker exec zerotier-sovereign curl -fsS   -H "X-ZT1-Auth: $token" -H 'Content-Type: application/json'   -X POST -d '{"name":"migration-persist-me"}'   "http://127.0.0.1:9993/controller/network/$nwid" >/dev/null
+
+(
+  cd "$BASE_ROOT"
+  docker compose stop
+)
+
+# Move only the state that belongs to the new architecture. PostgreSQL is
+# intentionally left behind: it is no longer part of the candidate runtime.
+mkdir -p "$ROOT/data"
+cp -a "$BASE_ROOT/data/planet" "$ROOT/data/"
+cp -a "$BASE_ROOT/data/controller" "$ROOT/data/"
+cp -a "$BASE_ROOT/data/ztncui" "$ROOT/data/"
+
 export SOVEREIGN_IMAGE="$NEW_IMAGE"
 docker compose up -d --no-build sovereign
-wait_healthy
-after=$(docker compose exec -T postgres psql -U "${POSTGRES_USER:-ztnet}" -d "${POSTGRES_DB:-ztnet}" -Atqc 'select count(*) from "_prisma_migrations";')
-probe=$(docker compose exec -T postgres psql -U "${POSTGRES_USER:-ztnet}" -d "${POSTGRES_DB:-ztnet}" -Atqc 'select note from sovereign_upgrade_probe where id=1;')
+wait_healthy zerotier-sovereign
 
-test "$probe" = persist-me
-[[ "$before" =~ ^[0-9]+$ && "$after" =~ ^[0-9]+$ ]]
-(( after >= before ))
-curl -fsS "http://127.0.0.1:${ZTNET_PORT:-3000}/" >/dev/null
+test "$root_before" = "$(hash_file zerotier-sovereign /data/planet/one/identity.secret)"
+test "$current_before" = "$(hash_file zerotier-sovereign /data/planet/world/current.c25519)"
+test "$previous_before" = "$(hash_file zerotier-sovereign /data/planet/world/previous.c25519)"
+test "$controller_before" = "$(hash_file zerotier-sovereign /data/controller/one/identity.secret)"
+test "$passwd_before" = "$(hash_file zerotier-sovereign /data/ztncui/passwd)"
+test "$session_before" = "$(hash_file zerotier-sovereign /data/ztncui/session.secret)"
 
-echo "PASS upgrade smoke: migrations $before -> $after"
+token=$(docker exec zerotier-sovereign sh -lc 'cat /data/controller/one/authtoken.secret' | tr -d '\r\n')
+docker exec zerotier-sovereign curl -fsS   -H "X-ZT1-Auth: $token"   "http://127.0.0.1:9993/controller/network/$nwid" |
+  grep -q 'migration-persist-me'
+
+curl -fsS "http://127.0.0.1:${ZTNCUI_PORT:-3000}/" >/dev/null
+
+echo "PASS architecture migration: ZeroTier and ztncui state preserved; PostgreSQL retired"
