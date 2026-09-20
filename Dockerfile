@@ -56,27 +56,6 @@ RUN apk add --no-cache git ca-certificates \
     && git -C /src rev-parse HEAD > /src/.source-commit \
     && printf '%s\n' "${ZTNET_SOURCE_REF}" > /src/.source-ref
 
-ARG NODEJS_IMAGE
-FROM --platform=$BUILDPLATFORM ${NODEJS_IMAGE} AS ztnet_base
-
-FROM ztnet_base AS ztnet_deps
-WORKDIR /app
-COPY --from=ztnet_source /src/package.json /src/package-lock.json ./
-COPY --from=ztnet_source /src/prisma ./prisma
-# The image is built natively per architecture, so keep only the current
-# architecture's Prisma engine instead of bundling amd64 + arm64 together.
-RUN sed -i 's/binaryTargets = .*/binaryTargets = ["native"]/' prisma/schema.prisma \
-    && npm ci \
-    && npx prisma generate
-
-FROM ztnet_base AS ztnet_builder
-ARG NEXT_PUBLIC_APP_VERSION
-WORKDIR /app
-COPY --from=ztnet_deps /app/node_modules ./node_modules
-COPY --from=ztnet_source /src ./
-RUN sed -i 's/binaryTargets = .*/binaryTargets = ["native"]/' prisma/schema.prisma \
-    && SKIP_ENV_VALIDATION=1 npm run build
-
 # -----------------------------------------------------------------------------
 # ztncui: project-maintained controller UI, built from vendored source.
 # Keep it separate from ZTNet during the migration experiment.
@@ -93,7 +72,7 @@ RUN test -f app.js \
     && test -f bin/www \
     && node --check app.js \
     && node --check bin/www
-FROM ztnet_base AS ztmkworld_builder
+FROM ${NODEJS_IMAGE} AS ztmkworld_builder
 ARG TARGETPLATFORM
 WORKDIR /app
 COPY --from=ztnet_source /src/ztnodeid/build/linux_amd64/ztmkworld ztmkworld_amd64
@@ -106,20 +85,15 @@ RUN case "${TARGETPLATFORM}" in \
     && chmod +x /usr/local/bin/ztmkworld
 
 # -----------------------------------------------------------------------------
-# One business image: PLANET + Controller + ZTNet.
-# PostgreSQL deliberately stays in its own container.
+# One business image: PLANET + Controller + project-maintained ztncui.
 # -----------------------------------------------------------------------------
 ARG NODEJS_IMAGE
 FROM ${NODEJS_IMAGE} AS runtime
 ARG SOVEREIGN_VERSION=0.3.0
 ARG PLANET_ZEROTIER_VERSION=1.16.2
 ARG CONTROLLER_ZEROTIER_VERSION=1.14.2
-ARG ZTNET_VERSION=v0.8.3
-ARG NEXT_PUBLIC_APP_VERSION=v0.8.3
 
 ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
-    NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION} \
     PORT=3000 \
     PLANET_ZT_PORT=9994 \
     CONTROLLER_ZT_PORT=9993 \
@@ -128,45 +102,15 @@ ENV NODE_ENV=production \
     WORLD_DIR=/data/planet/world \
     DIST_DIR=/data/planet/dist \
     CONFIG_DIR=/data/planet/config \
-    CONTROLLER_HOME=/data/controller/one \
-    PATH=/app/node_modules/.bin:${PATH}
+    CONTROLLER_HOME=/data/controller/one
 
 RUN apk add --no-cache \
-    bash ca-certificates coreutils curl libgcc libstdc++ openssl postgresql17-client tini
+    bash ca-certificates coreutils curl libgcc libstdc++ openssl tini
 
-# ZTNet runtime. Resolve its runtime tool versions from the upstream lock file,
-# but install them in the TARGET platform image. This avoids copying BUILDPLATFORM
-# native modules into arm64 releases while also avoiding independent hard-coded pins.
-WORKDIR /app
-COPY --from=ztnet_source /src/package-lock.json /tmp/ztnet-package-lock.json
-RUN set -eux; \
-    prisma_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/prisma']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
-    prisma_client_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/@prisma/client']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
-    cuid2_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/@paralleldrive/cuid2']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
-    tsnode_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/ts-node']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
-    tsx_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/tsx']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
-    dotenv_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/dotenv']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
-    npm install --no-audit --no-fund --no-save "prisma@${prisma_version}" "@prisma/client@${prisma_client_version}" "@paralleldrive/cuid2@${cuid2_version}" "dotenv@${dotenv_version}" "ts-node@${tsnode_version}" "tsx@${tsx_version}"; \
-    npm cache clean --force; \
-    rm -rf /root/.npm; \
-    rm -f /tmp/ztnet-package-lock.json package.json package-lock.json
-
-COPY --from=ztnet_builder /app/next.config.mjs ./
-COPY --from=ztnet_builder /app/public ./public
-COPY --from=ztnet_builder /app/package.json ./package.json
-COPY --from=ztnet_builder --chown=1001:1001 /app/.next/standalone ./
-COPY --from=ztnet_builder --chown=1001:1001 /app/.next/static ./.next/static
-COPY --from=ztnet_builder --chown=1001:1001 /app/prisma ./prisma
-COPY --from=ztnet_builder --chown=1001:1001 /app/init-db.sh ./init-db.sh
-
-# ztncui runs side-by-side on port 3002 during migration validation.
+# Project-maintained ztncui is the sole management UI.
 COPY --from=ztncui_builder /app /opt/ztncui
 COPY ui/ztncui/LICENSE /opt/ztncui/LICENSE
 COPY --from=ztmkworld_builder /usr/local/bin/ztmkworld /usr/local/bin/ztmkworld
-RUN sed -i 's#npx prisma#/app/node_modules/.bin/prisma#g' /app/init-db.sh \
-    && chmod +x /app/init-db.sh \
-    && touch /app/.env \
-    && /app/node_modules/.bin/prisma generate
 
 # Keep the two ZeroTier installations physically separate inside the same image.
 RUN mkdir -p /opt/zerotier-planet /opt/zerotier-controller /usr/local/share/zerotier-sovereign
@@ -174,16 +118,13 @@ COPY --from=planet_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-planet/ze
 COPY --from=planet_builder /tmp/planet-zerotier-commit /usr/local/share/zerotier-sovereign/planet-zerotier-commit
 COPY --from=controller_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-controller/zerotier-one
 COPY --from=controller_builder /tmp/controller-zerotier-commit /usr/local/share/zerotier-sovereign/controller-zerotier-commit
-COPY --from=ztnet_source /src/.source-commit /usr/local/share/zerotier-sovereign/ztnet-commit
-COPY --from=ztnet_source /src/.source-ref /usr/local/share/zerotier-sovereign/ztnet-ref
 RUN ln -s zerotier-one /opt/zerotier-planet/zerotier-idtool \
     && ln -s zerotier-one /opt/zerotier-planet/zerotier-cli \
     && ln -s zerotier-one /opt/zerotier-controller/zerotier-idtool \
     && ln -s zerotier-one /opt/zerotier-controller/zerotier-cli \
     && printf '%s\n' "${SOVEREIGN_VERSION}" > /usr/local/share/zerotier-sovereign/version \
     && printf '%s\n' "${PLANET_ZEROTIER_VERSION}" > /usr/local/share/zerotier-sovereign/planet-zerotier-version \
-    && printf '%s\n' "${CONTROLLER_ZEROTIER_VERSION}" > /usr/local/share/zerotier-sovereign/controller-zerotier-version \
-    && printf '%s\n' "${ZTNET_VERSION}" > /usr/local/share/zerotier-sovereign/ztnet-version
+    && printf '%s\n' "${CONTROLLER_ZEROTIER_VERSION}" > /usr/local/share/zerotier-sovereign/controller-zerotier-version
 
 COPY rootfs/ /
 RUN chmod +x /usr/local/bin/* \
@@ -193,10 +134,10 @@ RUN chmod +x /usr/local/bin/* \
     && ln -s /data/controller/one /var/lib/zerotier-one
 
 LABEL org.opencontainers.image.title="ZeroTier Sovereign" \
-      org.opencontainers.image.description="Self-owned ZeroTier PLANET + standalone Controller + ZTNet UI" \
+      org.opencontainers.image.description="Self-owned ZeroTier PLANET + standalone Controller + maintained ztncui UI" \
       org.opencontainers.image.version="${SOVEREIGN_VERSION}"
 
-EXPOSE 9994/tcp 9994/udp 9993/udp 3000/tcp 3001/tcp 3002/tcp
+EXPOSE 9994/tcp 9994/udp 9993/udp 3000/tcp 3001/tcp
 HEALTHCHECK --interval=30s --timeout=8s --start-period=120s --retries=5 \
   CMD ["/usr/local/bin/sovereign-healthcheck"]
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/sovereign-entrypoint"]
