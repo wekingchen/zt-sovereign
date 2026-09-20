@@ -20,7 +20,12 @@ Controller ZeroTier:
   commit:  $(readf "$SHARE/controller-zerotier-commit")
 
 ztncui:
-  source:  vendored in ui/ztncui
+  source:  maintained in-repo (ui/ztncui)
+  upstream: key-networks/ztncui v0.8.14 + project changes
+
+ztmkworld helper:
+  source commit: $(readf "$SHARE/mkworld-source-commit")
+  note: build-time provenance from sinamics/ztnet; no ZTNet runtime
 
 Architecture:
   $(uname -s)/$(uname -m)
