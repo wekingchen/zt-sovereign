@@ -1,54 +1,59 @@
-# Validation status — v0.3.0
+# Validation status — v0.4.0 candidate
 
-## 已在当前生成环境实际执行
+v0.4.0 的发布判断以 GitHub Actions 的真实构建和运行结果为准，不以静态代码审查代替运行验证。
 
-- 所有 Bash 脚本 `bash -n` 语法检查
-- Python `py_compile`
-- Compose / GitHub Actions YAML 解析检查
-- `tests/unit/test_planetctl.sh`
-  - 首次初始化
-  - ensure 重用
-  - regenerate
-  - identity 不变
-  - signing key 不变
-  - World timestamp 单调递增
-  - endpoint 更新
-  - signing key 缺失时拒绝继续
-- `tests/unit/test_file_server.py`
-  - healthz
-  - 未授权 401
-  - query key 下载
-  - Bearer token 下载
-  - moon 下载
-  - 路径穿越拒绝
-  - 下载密钥持久化
-- `tests/unit/test_version_sync.sh`
+## 已建立的验证层
 
-## 当前环境无法声称已经执行
+### 静态与单元测试
 
-当前生成环境没有可用 Docker daemon，也不能直接访问 GitHub 构建依赖，因此这里没有伪称以下测试已完成：
+- ShellCheck
+- Bash / Python / JavaScript syntax
+- PLANET 初始化、ensure、regenerate
+- identity / signing key 持久化
+- World timestamp 单调递增
+- signing key 缺失时拒绝继续
+- PLANET 文件服务认证与目录穿越防护
+- `versions.env` / `.env.example` 同步
 
-- ZeroTier 1.16.x 真实源码编译
-- ZeroTier 1.14.2 Controller 真实源码编译
-- ZTNet v0.8.3 真实源码编译
-- amd64 / arm64 buildx
-- Supervisor 下两个 ZeroTier daemon + ZTNet 的真实运行
-- PostgreSQL migration
-- Controller REST API Network CRUD
-- restart persistence
-- old -> candidate upgrade
+### amd64 集成测试
 
-这些测试已经编码进 `.github/workflows/`，第一次推入 GitHub 后应以 Actions 结果为准。
+CI 会在 GitHub 原生 amd64 Runner 上：
 
-## 发布门槛
+- 从固定源码 commit 构建 PLANET 与 Controller；
+- 构建项目内维护的 ztncui；
+- 启动完整单容器运行栈；
+- 校验 PLANET 文件服务；
+- 通过真实 Controller REST API 创建/读取/删除测试 Network；
+- 验证 ztncui 首次随机密码、强制改密及 bootstrap 文件删除；
+- 重启后检查 PLANET identity、World keys、Controller identity 和 ztncui 状态。
 
-不应因为静态测试通过就把 v0.3.0 当成生产验证完成。建议顺序：
+ztncui-only 阶段已测得 amd64 未压缩运行镜像约 217 MiB；最终候选仍以对应 CI 的 footprint 输出为准。
 
-1. 推入私有 GitHub 仓库。
-2. CI 全绿。
-3. Upgrade Test 全绿（如果 base 已是 v0.3 架构）。
-4. `candidate` 多架构镜像生成成功。
-5. 在非关键节点手工试运行。
-6. 创建 `v0.3.0` tag。
-7. Release workflow 全绿并发布不可变镜像。
-8. 最后再手工 Promote Stable。
+### Upgrade Test
+
+PR 会分别构建 base 与 candidate，并真实执行 old -> new 切换。迁移状态通过 Docker daemon 从旧容器复制，以正确处理 root-owned 0600 密钥文件。
+
+候选必须验证：
+
+- PLANET identity 不变；
+- current / previous world signing keys 不变；
+- Controller identity 不变；
+- Controller Network 数据保留；
+- ztncui passwd / session 状态保留；
+- candidate 健康启动。
+
+### ARM64
+
+main CI 通过后，Candidate workflow 使用 GitHub 原生 ARM64 Runner 构建并启动 ARM64 镜像，执行同一套集成与重启持久化测试，不使用 QEMU 作为运行验证。
+
+## v0.4.0 发布门槛
+
+1. 直接面向 `main` 的 v0.4.0 candidate PR：CI 全绿。
+2. 同一 PR：Upgrade Test 全绿，证明真实 main/base -> v0.4.0 迁移。
+3. 合并 main 后：多架构 `candidate` 成功发布，ARM64 smoke 全绿。
+4. 在非关键节点手工试运行。
+5. 创建 `v0.4.0` tag。
+6. Release workflow 全绿并发布不可变镜像。
+7. 最后手工 Promote Stable。
+
+任何一步未通过，都不应仅凭“代码看起来正确”晋升 stable。
