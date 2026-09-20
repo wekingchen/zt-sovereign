@@ -3,11 +3,13 @@
 ARG NODEJS_IMAGE=node:24-alpine3.24
 
 # -----------------------------------------------------------------------------
-# PLANET / Root node: modern ZeroTier, open build only.
+# Shared ZeroTier runtime.
+# Build once with the source-available FileDB Controller included, then launch
+# the same binary as two isolated processes: PLANET and Controller.
 # -----------------------------------------------------------------------------
-FROM alpine:3.24 AS planet_builder
-ARG PLANET_ZEROTIER_VERSION=1.16.2
-ARG PLANET_ZEROTIER_SOURCE_REF=1.16.2
+FROM alpine:3.24 AS zerotier_builder
+ARG ZEROTIER_VERSION=1.16.2
+ARG ZEROTIER_SOURCE_REF=fc5c3ec22090b5b2a0f274e863651fe9ca489bf4
 RUN apk add --no-cache \
     bash build-base ca-certificates curl git linux-headers openssl-dev pkgconf
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
@@ -15,29 +17,9 @@ ENV PATH=/root/.cargo/bin:${PATH}
 WORKDIR /src/ZeroTierOne
 RUN git init . \
     && git remote add origin https://github.com/zerotier/ZeroTierOne.git \
-    && git fetch --depth 1 origin "${PLANET_ZEROTIER_SOURCE_REF}" \
+    && git fetch --depth 1 origin "${ZEROTIER_SOURCE_REF}" \
     && git checkout --detach FETCH_HEAD \
-    && git rev-parse HEAD > /tmp/planet-zerotier-commit
-# Do not enable ZT_NONFREE / ZT_CONTROLLER here.
-RUN make -j"$(nproc)" \
-    && strip --strip-unneeded zerotier-one
-
-# -----------------------------------------------------------------------------
-# Controller: current ZeroTier release with the source-available FileDB controller enabled.
-# -----------------------------------------------------------------------------
-FROM alpine:3.24 AS controller_builder
-ARG CONTROLLER_ZEROTIER_VERSION=1.16.2
-ARG CONTROLLER_ZEROTIER_SOURCE_REF=fc5c3ec22090b5b2a0f274e863651fe9ca489bf4
-RUN apk add --no-cache \
-    bash build-base ca-certificates curl git linux-headers openssl-dev pkgconf
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
-ENV PATH=/root/.cargo/bin:${PATH}
-WORKDIR /src/ZeroTierOne
-RUN git init . \
-    && git remote add origin https://github.com/zerotier/ZeroTierOne.git \
-    && git fetch --depth 1 origin "${CONTROLLER_ZEROTIER_SOURCE_REF}" \
-    && git checkout --detach FETCH_HEAD \
-    && git rev-parse HEAD > /tmp/controller-zerotier-commit
+    && git rev-parse HEAD > /tmp/zerotier-commit
 RUN make -j"$(nproc)" ZT_NONFREE=1 \
     && strip --strip-unneeded zerotier-one
 
@@ -84,13 +66,13 @@ RUN case "${TARGETPLATFORM}" in \
     && chmod +x /usr/local/bin/ztmkworld
 
 # -----------------------------------------------------------------------------
-# One business image: PLANET + Controller + project-maintained ztncui.
+# One business image: one shared ZeroTier binary + two isolated ZeroTier
+# processes (PLANET and Controller) + project-maintained ztncui.
 # -----------------------------------------------------------------------------
 ARG NODEJS_IMAGE
 FROM ${NODEJS_IMAGE} AS runtime
-ARG SOVEREIGN_VERSION=0.4.1
-ARG PLANET_ZEROTIER_VERSION=1.16.2
-ARG CONTROLLER_ZEROTIER_VERSION=1.16.2
+ARG SOVEREIGN_VERSION=0.4.2
+ARG ZEROTIER_VERSION=1.16.2
 
 ENV NODE_ENV=production \
     PORT=3000 \
@@ -112,22 +94,18 @@ COPY ui/ztncui/LICENSE /opt/ztncui/LICENSE
 COPY ui/ztncui/UPSTREAM.md /opt/ztncui/UPSTREAM.md
 COPY --from=mkworld_builder /usr/local/bin/ztmkworld /usr/local/bin/ztmkworld
 
-# Keep the two ZeroTier installations physically separate inside the same image.
-RUN mkdir -p /opt/zerotier-planet /opt/zerotier-controller /usr/local/share/zerotier-sovereign
+# One ZeroTier installation is shared by both runtime processes. Their homes,
+# identities, ports and trust roles remain strictly separate.
+RUN mkdir -p /opt/zerotier /usr/local/share/zerotier-sovereign
 COPY THIRD_PARTY_NOTICES.md /usr/local/share/zerotier-sovereign/THIRD_PARTY_NOTICES.md
-COPY --from=planet_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-planet/zerotier-one
-COPY --from=planet_builder /tmp/planet-zerotier-commit /usr/local/share/zerotier-sovereign/planet-zerotier-commit
-COPY --from=controller_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-controller/zerotier-one
-COPY --from=controller_builder /tmp/controller-zerotier-commit /usr/local/share/zerotier-sovereign/controller-zerotier-commit
-COPY --from=controller_builder /src/ZeroTierOne/nonfree/LICENSE.md /usr/local/share/zerotier-sovereign/ZEROTIER-NONFREE-LICENSE.md
+COPY --from=zerotier_builder /src/ZeroTierOne/zerotier-one /opt/zerotier/zerotier-one
+COPY --from=zerotier_builder /tmp/zerotier-commit /usr/local/share/zerotier-sovereign/zerotier-commit
+COPY --from=zerotier_builder /src/ZeroTierOne/nonfree/LICENSE.md /usr/local/share/zerotier-sovereign/ZEROTIER-NONFREE-LICENSE.md
 COPY --from=mkworld_source /src/.source-commit /usr/local/share/zerotier-sovereign/mkworld-source-commit
-RUN ln -s zerotier-one /opt/zerotier-planet/zerotier-idtool \
-    && ln -s zerotier-one /opt/zerotier-planet/zerotier-cli \
-    && ln -s zerotier-one /opt/zerotier-controller/zerotier-idtool \
-    && ln -s zerotier-one /opt/zerotier-controller/zerotier-cli \
+RUN ln -s zerotier-one /opt/zerotier/zerotier-idtool \
+    && ln -s zerotier-one /opt/zerotier/zerotier-cli \
     && printf '%s\n' "${SOVEREIGN_VERSION}" > /usr/local/share/zerotier-sovereign/version \
-    && printf '%s\n' "${PLANET_ZEROTIER_VERSION}" > /usr/local/share/zerotier-sovereign/planet-zerotier-version \
-    && printf '%s\n' "${CONTROLLER_ZEROTIER_VERSION}" > /usr/local/share/zerotier-sovereign/controller-zerotier-version
+    && printf '%s\n' "${ZEROTIER_VERSION}" > /usr/local/share/zerotier-sovereign/zerotier-version
 
 COPY rootfs/ /
 RUN chmod +x /usr/local/bin/* \
