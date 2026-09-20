@@ -118,14 +118,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ca-certificates curl python3 supervisor tini \
+       ca-certificates curl tini \
     && install -d /usr/share/postgresql-common/pgdg \
     && curl --fail -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
     && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo \"$VERSION_CODENAME\")-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends postgresql-client-17 \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+              /usr/share/doc/* /usr/share/man/* /usr/share/locale/*
 
 # ZTNet runtime. Resolve its runtime tool versions from the upstream lock file,
 # but install them in the TARGET platform image. This avoids copying BUILDPLATFORM
@@ -155,7 +156,9 @@ COPY --from=ztmkworld_builder /usr/local/bin/ztmkworld /usr/local/bin/ztmkworld
 RUN sed -i 's#npx prisma#/app/node_modules/.bin/prisma#g' /app/init-db.sh \
     && chmod +x /app/init-db.sh \
     && touch /app/.env \
-    && /app/node_modules/.bin/prisma generate
+    && /app/node_modules/.bin/prisma generate \
+    && rm -rf /root/.npm /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
 
 # Keep the two ZeroTier installations physically separate inside the same image.
 RUN mkdir -p /opt/zerotier-planet /opt/zerotier-controller /usr/local/share/zerotier-sovereign
