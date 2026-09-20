@@ -52,7 +52,30 @@ const labels = {
   ipRangeStart: '起始 IP',
   ipRangeEnd: '结束 IP',
   domain: '域名',
-  servers: 'DNS 服务器'
+  servers: 'DNS 服务器',
+  authTokens: '授权令牌',
+  authorizationEndpoint: '授权端点',
+  clientId: '客户端 ID',
+  rulesSource: '规则源',
+  ssoEnabled: '启用 SSO',
+  lastAuthorizedTime: '上次授权时间',
+  lastDeauthorizedTime: '上次取消授权时间',
+  authenticationExpiryTime: '认证到期时间',
+  authenticationURL: '认证地址',
+  vMajor: '主版本号',
+  vMinor: '次版本号',
+  vRev: '修订版本号',
+  vProto: '协议版本',
+  protocolVersion: '协议版本',
+  bondingPolicy: '链路聚合策略',
+  tunneled: '隧道连接',
+  expired: '已过期',
+  supportsRulesEngine: '支持规则引擎',
+  physicalAddr: '物理地址',
+  lastSeen: '上次在线时间',
+  lastOnline: '上次上线时间',
+  lastAuthorized: '上次授权',
+  lastDeauthorized: '上次取消授权'
 };
 
 const titles = {
