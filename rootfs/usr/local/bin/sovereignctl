@@ -61,7 +61,7 @@ status() {
   echo "--- Controller ---"
   controller_status || true
   echo
-  echo "--- ZTNet ---"
+  echo "--- ztncui ---"
   curl -fsS -o /dev/null -w 'HTTP %{http_code}\n' http://127.0.0.1:3000/ || true
 }
 
