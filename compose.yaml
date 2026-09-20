@@ -29,6 +29,7 @@ services:
 
       # ztncui
       ZTNCUI_PORT: 3000
+      ZTNCUI_ADMIN_PASSWORD: ${ZTNCUI_ADMIN_PASSWORD:-}
 
     ports:
       # Public/reachable PLANET endpoint.
