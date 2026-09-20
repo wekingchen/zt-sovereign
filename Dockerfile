@@ -109,10 +109,12 @@ RUN apk add --no-cache \
 # Project-maintained ztncui is the sole management UI.
 COPY --from=ztncui_builder /app /opt/ztncui
 COPY ui/ztncui/LICENSE /opt/ztncui/LICENSE
+COPY ui/ztncui/UPSTREAM.md /opt/ztncui/UPSTREAM.md
 COPY --from=mkworld_builder /usr/local/bin/ztmkworld /usr/local/bin/ztmkworld
 
 # Keep the two ZeroTier installations physically separate inside the same image.
 RUN mkdir -p /opt/zerotier-planet /opt/zerotier-controller /usr/local/share/zerotier-sovereign
+COPY THIRD_PARTY_NOTICES.md /usr/local/share/zerotier-sovereign/THIRD_PARTY_NOTICES.md
 COPY --from=planet_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-planet/zerotier-one
 COPY --from=planet_builder /tmp/planet-zerotier-commit /usr/local/share/zerotier-sovereign/planet-zerotier-commit
 COPY --from=controller_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-controller/zerotier-one
