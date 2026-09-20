@@ -1,17 +1,15 @@
 # syntax=docker/dockerfile:1.7
 
-ARG NODEJS_IMAGE=node:24-bookworm-slim
+ARG NODEJS_IMAGE=node:24-alpine3.22
 
 # -----------------------------------------------------------------------------
 # PLANET / Root node: modern ZeroTier, open build only.
 # -----------------------------------------------------------------------------
-FROM debian:bookworm AS planet_builder
+FROM alpine:3.22 AS planet_builder
 ARG PLANET_ZEROTIER_VERSION=1.16.2
 ARG PLANET_ZEROTIER_SOURCE_REF=1.16.2
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential ca-certificates curl git pkg-config libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache \
+    bash build-base ca-certificates curl git linux-headers openssl-dev pkgconf
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
 ENV PATH=/root/.cargo/bin:${PATH}
 WORKDIR /src/ZeroTierOne
@@ -28,13 +26,11 @@ RUN make -j"$(nproc)" \
 # Controller: compatibility branch that still contains the standalone controller.
 # Build on bookworm so the binary uses runtime-compatible glibc/OpenSSL.
 # -----------------------------------------------------------------------------
-FROM debian:bookworm AS controller_builder
+FROM alpine:3.22 AS controller_builder
 ARG CONTROLLER_ZEROTIER_VERSION=1.14.2
 ARG CONTROLLER_ZEROTIER_SOURCE_REF=1.14.2
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential ca-certificates curl git pkg-config libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache \
+    bash build-base ca-certificates curl git linux-headers openssl-dev pkgconf
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
 ENV PATH=/root/.cargo/bin:${PATH}
 WORKDIR /src/ZeroTierOne
@@ -105,8 +101,7 @@ ARG CONTROLLER_ZEROTIER_VERSION=1.14.2
 ARG ZTNET_VERSION=v0.8.3
 ARG NEXT_PUBLIC_APP_VERSION=v0.8.3
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    NODE_ENV=production \
+ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION} \
     PORT=3000 \
@@ -120,17 +115,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     CONTROLLER_HOME=/data/controller/one \
     PATH=/app/node_modules/.bin:${PATH}
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       ca-certificates curl tini \
-    && install -d /usr/share/postgresql-common/pgdg \
-    && curl --fail -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo \"$VERSION_CODENAME\")-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-17 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-              /usr/share/doc/* /usr/share/man/* /usr/share/locale/*
+RUN apk add --no-cache \
+    bash ca-certificates coreutils curl libgcc libstdc++ openssl postgresql17-client tini
 
 # ZTNet runtime. Resolve its runtime tool versions from the upstream lock file,
 # but install them in the TARGET platform image. This avoids copying BUILDPLATFORM
@@ -193,4 +179,4 @@ LABEL org.opencontainers.image.title="ZeroTier Sovereign" \
 EXPOSE 9994/tcp 9994/udp 9993/udp 3000/tcp 3001/tcp
 HEALTHCHECK --interval=30s --timeout=8s --start-period=120s --retries=5 \
   CMD ["/usr/local/bin/sovereign-healthcheck"]
-ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/sovereign-entrypoint"]
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/sovereign-entrypoint"]
