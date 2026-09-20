@@ -21,7 +21,8 @@ RUN git init . \
     && git checkout --detach FETCH_HEAD \
     && git rev-parse HEAD > /tmp/planet-zerotier-commit
 # Do not enable ZT_NONFREE / ZT_CONTROLLER here.
-RUN make -j"$(nproc)"
+RUN make -j"$(nproc)" \
+    && strip --strip-unneeded zerotier-one
 
 # -----------------------------------------------------------------------------
 # Controller: compatibility branch that still contains the standalone controller.
@@ -42,7 +43,8 @@ RUN git init . \
     && git fetch --depth 1 origin "${CONTROLLER_ZEROTIER_SOURCE_REF}" \
     && git checkout --detach FETCH_HEAD \
     && git rev-parse HEAD > /tmp/controller-zerotier-commit
-RUN make -j"$(nproc)"
+RUN make -j"$(nproc)" \
+    && strip --strip-unneeded zerotier-one
 
 # -----------------------------------------------------------------------------
 # ZTNet source. ZTNET_SOURCE_REF may be a release tag OR an immutable commit SHA.
@@ -116,12 +118,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ca-certificates curl jq python3 supervisor sudo tini procps \
+       ca-certificates curl python3 supervisor tini \
     && install -d /usr/share/postgresql-common/pgdg \
     && curl --fail -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
     && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo \"$VERSION_CODENAME\")-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-15 postgresql-client-16 postgresql-client-17 postgresql-client-18 \
+    && apt-get install -y --no-install-recommends postgresql-client-17 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -137,7 +139,9 @@ RUN set -eux; \
     tsnode_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/ts-node']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
     tsx_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/tsx']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
     dotenv_version="$(node -e "const p=require('/tmp/ztnet-package-lock.json'); const v=p.packages?.['node_modules/dotenv']?.version; if(!v) process.exit(2); process.stdout.write(v)")"; \
-    npm install --no-save "prisma@${prisma_version}" "@prisma/client@${prisma_client_version}" "@paralleldrive/cuid2@${cuid2_version}" "dotenv@${dotenv_version}" "ts-node@${tsnode_version}" "tsx@${tsx_version}"; \
+    npm install --no-audit --no-fund --no-save "prisma@${prisma_version}" "@prisma/client@${prisma_client_version}" "@paralleldrive/cuid2@${cuid2_version}" "dotenv@${dotenv_version}" "ts-node@${tsnode_version}" "tsx@${tsx_version}"; \
+    npm cache clean --force; \
+    rm -rf /root/.npm; \
     rm -f /tmp/ztnet-package-lock.json package.json package-lock.json
 
 COPY --from=ztnet_builder /app/next.config.mjs ./
