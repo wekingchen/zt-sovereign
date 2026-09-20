@@ -119,6 +119,7 @@ COPY --from=planet_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-planet/ze
 COPY --from=planet_builder /tmp/planet-zerotier-commit /usr/local/share/zerotier-sovereign/planet-zerotier-commit
 COPY --from=controller_builder /src/ZeroTierOne/zerotier-one /opt/zerotier-controller/zerotier-one
 COPY --from=controller_builder /tmp/controller-zerotier-commit /usr/local/share/zerotier-sovereign/controller-zerotier-commit
+COPY --from=controller_builder /src/ZeroTierOne/nonfree/LICENSE.md /usr/local/share/zerotier-sovereign/ZEROTIER-NONFREE-LICENSE.md
 COPY --from=mkworld_source /src/.source-commit /usr/local/share/zerotier-sovereign/mkworld-source-commit
 RUN ln -s zerotier-one /opt/zerotier-planet/zerotier-idtool \
     && ln -s zerotier-one /opt/zerotier-planet/zerotier-cli \
