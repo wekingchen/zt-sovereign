@@ -14,6 +14,7 @@ const min_pass_len = 10;
 const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
 const chmod = util.promisify(fs.chmod);
+const unlink = util.promisify(fs.unlink);
 
 let _users = null;
 
@@ -122,6 +123,14 @@ exports.password_post = async function(req, res) {
     users[req.body.username] = user;
 
     users = await update_users(users);
+
+    if (req.body.username === 'admin' && pass_set && process.env.ZTNCUI_INITIAL_PASSWORD_FILE) {
+      try {
+        await unlink(process.env.ZTNCUI_INITIAL_PASSWORD_FILE);
+      } catch (err) {
+        if (err.code !== 'ENOENT') throw err;
+      }
+    }
 
     const message = 'Successfully set password for ' + req.body.username;
     res.render('password', { title: 'Set password', navigate: navigate, user: user, readonly: true, message: message });
