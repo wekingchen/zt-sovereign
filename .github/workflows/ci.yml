@@ -101,7 +101,6 @@ jobs:
             echo '~~~text'
             docker run --rm --entrypoint /bin/bash zerotier-sovereign:local -lc '
               du -sh /opt/ztncui /opt/ztncui/node_modules /opt/zerotier-planet /opt/zerotier-controller /usr/local/lib/node_modules 2>/dev/null || true
-              du -sh /usr/lib/postgresql* 2>/dev/null || true
               echo
               if command -v dpkg-query >/dev/null 2>&1; then
                 dpkg-query -W -f="\${Installed-Size}\t\${Package}\n" 2>/dev/null | sort -nr | head -n 25
