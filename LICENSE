@@ -1,0 +1,29 @@
+ZeroTier Sovereign Personal Non-Commercial Research License 1.0
+
+Copyright (c) 2026 ZeroTier Sovereign contributors
+
+This license applies only to original project-authored code and documentation in
+this repository that is not already governed by a third-party license.
+
+Permission is granted to use, copy, modify, and redistribute that Project Code
+solely for personal, non-commercial research, learning, and evaluation.
+
+Commercial use, organizational production use, government use, paid or unpaid
+service operation for third parties, and incorporation into a commercial product
+or service are not granted by this license.
+
+Any redistribution of Project Code under this license must retain this license
+and must not remove applicable copyright, attribution, or third-party notices.
+
+Third-party software and derivative works remain governed by their respective
+licenses. In particular, this license does not replace or restrict the licenses
+that apply to ZeroTier, ztncui, ztmkworld, Node.js, Alpine Linux, Rust, npm
+dependencies, or any other third-party component.
+
+THE PROJECT CODE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE PROJECT CODE OR ITS USE.
+
+This license is not an OSI-approved open-source license.
