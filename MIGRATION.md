@@ -1,20 +1,30 @@
-# v0.2.x -> v0.3.0 迁移
+# v0.3.x -> v0.4.0 迁移
 
-v0.3.0 将 PLANET、Controller 和 ZTNet 合并为一个业务镜像，但宿主机上的关键持久化目录仍沿用 v0.2 的路径，因此无需转换 identity、World key 或 PostgreSQL 数据。
+v0.4.0 不只是镜像瘦身，而是从 **ZTNet + PostgreSQL** 切换到 **项目内维护的 ztncui**。PLANET 与 Controller 的信任身份继续沿用；ZTNet/PostgreSQL 则退出运行架构。
 
-## 1. 先在 v0.2 目录做完整备份
+## 1. 先备份 v0.3
+
+在旧版本目录执行：
 
 ```bash
 ./scripts/backup.sh
 ```
 
-另外建议手工再复制一份：
+建议另外保留一份完整 `data/` 与旧 `.env`，直到 v0.4.0 经过自己的回滚窗口。
 
-```bash
-cp -a data data.pre-v0.3
+最不能丢失的是：
+
+```text
+data/planet/one/identity.secret
+data/planet/world/current.c25519
+data/planet/world/previous.c25519
+data/controller/one/identity.secret
+data/controller/one/controller.d/
 ```
 
-## 2. 停止旧栈
+不要通过重新生成这些文件来“修复升级”。
+
+## 2. 停止 v0.3
 
 ```bash
 docker compose down
@@ -22,48 +32,54 @@ docker compose down
 
 不要删除 `data/`。
 
-## 3. 用 v0.3 项目文件替换代码
+## 3. 切换到 v0.4.0 项目文件
 
-保留：
+v0.4.0 使用：
 
 ```text
 data/planet/
 data/controller/
+data/ztncui/
+```
+
+旧的：
+
+```text
 data/postgres/
 ```
 
-v0.3 Compose 会继续直接挂载这三个目录。
+不再被运行时挂载或消费。先保留归档，不要在首次升级时立即删除。
 
-## 4. 更新 `.env`
+## 4. 更新 .env
 
-v0.2 的：
-
-```env
-PLANET_IMAGE=...
-CONTROLLER_IMAGE=...
-ZTNET_IMAGE=...
-```
-
-删除，改为：
+保留 PLANET / Controller 的网络参数，例如：
 
 ```env
-SOVEREIGN_IMAGE=zerotier-sovereign:local
+PLANET_IP_ADDR4=...
+PLANET_IP_ADDR6=...
+PLANET_ZT_PORT=9994
+CONTROLLER_ZT_PORT=9993
 ```
 
-保留原有：
+删除旧的 ZTNet/PostgreSQL 配置，例如：
 
 ```env
-PLANET_IP_ADDR4 / PLANET_IP_ADDR6
-PLANET_ZT_PORT
-CONTROLLER_ZT_PORT
-ZTNET_URL
-ZTNET_AUTH_SECRET
-POSTGRES_PASSWORD
-POSTGRES_DB
-POSTGRES_USER
+ZTNET_URL=...
+ZTNET_AUTH_SECRET=...
+POSTGRES_PASSWORD=...
+POSTGRES_DB=...
+POSTGRES_USER=...
 ```
 
-可参考新的 `.env.example` 补齐缺失字段。
+以新的 `.env.example` 为准补齐配置。
+
+ztncui 首次管理员密码建议保持：
+
+```env
+ZTNCUI_ADMIN_PASSWORD=
+```
+
+为空时会自动生成随机一次性密码。
 
 ## 5. 验证并构建
 
@@ -72,7 +88,7 @@ POSTGRES_USER
 ./scripts/build-local.sh
 ```
 
-## 6. 启动 v0.3
+## 6. 启动 v0.4.0
 
 ```bash
 docker compose up -d
@@ -82,33 +98,45 @@ docker compose up -d
 
 ```bash
 ./scripts/status.sh
-```
-
-重点确认：
-
-```bash
 docker exec zerotier-sovereign sovereignctl version
 docker exec zerotier-sovereign planetctl info
 ```
 
-以及：
+首次登录 ztncui 时获取密码：
 
-- PLANET root node ID 与迁移前一致
-- Controller node identity 与迁移前一致
-- ZTNet 可以登录
-- 旧 Network / Member 仍存在
-- PostgreSQL migration 正常完成
+```bash
+docker exec zerotier-sovereign sovereignctl ztncui-initial-password
+```
 
-## 7. 确认稳定后再删除旧镜像
+## 7. 核对迁移不变量
 
-v0.3 不依赖 v0.2 的三个业务镜像。确认运行稳定以后再清理旧镜像即可。
+至少确认：
+
+- PLANET root node ID 与升级前一致；
+- World signing keys 没有变化；
+- Controller node identity 一致；
+- 原 Controller Network / Member 数据仍存在；
+- ztncui 可以创建、查看、修改网络；
+- 容器重启后上述状态仍保留。
+
+仓库的 Upgrade Test 会自动验证其中的核心身份、World key、Controller Network 和 ztncui 持久化不变量。
+
+## PostgreSQL 数据何时删除
+
+v0.4.0 不会读取旧 PostgreSQL。建议在：
+
+1. v0.4.0 已完成实际节点验证；
+2. 已确认无需回滚到 ZTNet；
+3. 已另行归档旧备份；
+
+之后再手工处理 `data/postgres/`。
 
 ## 回滚
 
-如果 v0.3 首次启动失败：
+如果 v0.4.0 验证失败：
 
-```bash
-docker compose down
-```
+1. 停止 v0.4.0；
+2. 恢复 v0.3 项目文件与旧 `.env`；
+3. 使用之前保留的 `data/`（尤其包括 `data/postgres/`）启动 v0.3。
 
-恢复 v0.2 项目文件，并继续使用原 `data/`。只要没有人为删除 PLANET/Controller identity、World signing keys 或 PostgreSQL 数据，回滚不需要重新生成网络身份。
+只要没有覆盖或删除 PLANET/Controller 的 identity、World signing keys 和旧 PostgreSQL 数据，回滚不需要重新创建 ZeroTier 信任身份。

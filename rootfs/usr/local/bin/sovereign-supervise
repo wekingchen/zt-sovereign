@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+RUN_DIR=/run/sovereign
+mkdir -p "$RUN_DIR"
+
+declare -a names=()
+declare -a pids=()
+
+start_child() {
+  local name=$1
+  shift
+  "$@" &
+  local pid=$!
+  names+=("$name")
+  pids+=("$pid")
+  printf '%s\n' "$pid" > "$RUN_DIR/$name.pid"
+  echo "Started $name (pid $pid)"
+}
+
+shutdown_children() {
+  trap - TERM INT
+  local pid
+  for pid in "${pids[@]}"; do
+    kill -TERM "$pid" 2>/dev/null || true
+  done
+  for pid in "${pids[@]}"; do
+    wait "$pid" 2>/dev/null || true
+  done
+  rm -f "$RUN_DIR"/*.pid
+}
+
+trap 'shutdown_children; exit 143' TERM
+trap 'shutdown_children; exit 130' INT
+
+start_child planet /usr/local/bin/run-planet
+start_child controller /usr/local/bin/run-controller
+start_child planet-files /usr/local/bin/file_server.js
+start_child ztncui /usr/local/bin/run-ztncui
+
+set +e
+wait -n "${pids[@]}"
+rc=$?
+set -e
+
+failed=unknown
+for i in "${!pids[@]}"; do
+  if ! kill -0 "${pids[$i]}" 2>/dev/null; then
+    failed=${names[$i]}
+    break
+  fi
+done
+
+echo >&2 "FATAL: supervised process '$failed' exited with status $rc; stopping container."
+shutdown_children
+(( rc == 0 )) && rc=1
+exit "$rc"

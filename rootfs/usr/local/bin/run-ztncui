@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+controller_home=${CONTROLLER_HOME:-/data/controller/one}
+controller_port=${CONTROLLER_ZT_PORT:-9993}
+state_dir=${ZTNCUI_STATE_DIR:-/data/ztncui}
+app_dir=${ZTNCUI_APP_DIR:-/opt/ztncui}
+http_port=${ZTNCUI_PORT:-3000}
+
+mkdir -p "$state_dir/storage"
+chmod 700 "$state_dir" "$state_dir/storage" 2>/dev/null || true
+
+initial_password_file="$state_dir/initial-admin-password"
+
+if [[ ! -s "$state_dir/passwd" ]]; then
+  if [[ -n "${ZTNCUI_ADMIN_PASSWORD:-}" ]]; then
+    admin_password=$ZTNCUI_ADMIN_PASSWORD
+    pass_set=true
+  else
+    admin_password=$(node -e 'process.stdout.write(require("crypto").randomBytes(18).toString("base64url"))')
+    pass_set=false
+    umask 077
+    printf '%s\n' "$admin_password" > "$initial_password_file"
+    echo "Generated initial ztncui admin password. Retrieve it with: sovereignctl ztncui-initial-password"
+  fi
+
+  (
+    cd "$app_dir"
+    ADMIN_PASSWORD="$admin_password" PASS_SET="$pass_set" node <<'JS' > "$state_dir/passwd"
+const argon2 = require("argon2");
+(async () => {
+  const hash = await argon2.hash(process.env.ADMIN_PASSWORD);
+  const user = { name: "admin", pass_set: process.env.PASS_SET === "true", hash };
+  process.stdout.write(JSON.stringify({ admin: user }));
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+JS
+  )
+  chmod 600 "$state_dir/passwd"
+fi
+
+if [[ ! -s "$state_dir/session.secret" ]]; then
+  umask 077
+  node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex") + "\n")' > "$state_dir/session.secret"
+fi
+
+rm -rf "$app_dir/etc/storage"
+ln -s "$state_dir/storage" "$app_dir/etc/storage"
+rm -f "$app_dir/etc/passwd"
+ln -s "$state_dir/passwd" "$app_dir/etc/passwd"
+
+for _ in $(seq 1 180); do
+  if [[ -s "$controller_home/authtoken.secret" ]]; then
+    token=$(<"$controller_home/authtoken.secret")
+    if curl -fsS -H "X-ZT1-Auth: $token" "http://127.0.0.1:${controller_port}/status" >/dev/null 2>&1; then
+      export ZT_TOKEN="$token"
+      export ZT_ADDR="http://127.0.0.1:${controller_port}"
+      export ZTNCUI_SESSION_SECRET
+      ZTNCUI_SESSION_SECRET=$(<"$state_dir/session.secret")
+      export HTTP_PORT="$http_port"
+      export ZTNCUI_INITIAL_PASSWORD_FILE="$initial_password_file"
+      export HTTP_ALL_INTERFACES=yes
+      export NODE_ENV=production
+      cd "$app_dir"
+      exec node ./bin/www
+    fi
+  fi
+  sleep 1
+done
+
+echo >&2 "FATAL: Controller API did not become ready for ztncui."
+exit 31

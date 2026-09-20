@@ -43,21 +43,11 @@ jobs:
           zt_tag=$(gh api repos/zerotier/ZeroTierOne/releases/latest --jq .tag_name)
           zt_sha=$(resolve_tag_commit zerotier/ZeroTierOne "$zt_tag")
           controller_sha=$(resolve_tag_commit zerotier/ZeroTierOne "$CONTROLLER_ZEROTIER_VERSION")
-          ztnet_tag=$(gh api repos/sinamics/ztnet/releases/latest --jq .tag_name)
-          ztnet_sha=$(resolve_tag_commit sinamics/ztnet "$ztnet_tag")
-
-          gh api "repos/sinamics/ztnet/contents/Dockerfile?ref=${ztnet_tag}" --jq .content \
-            | tr -d '\n' | base64 -d > /tmp/ztnet.Dockerfile
-          node_image=$(sed -n 's/^ARG NODEJS_IMAGE=//p' /tmp/ztnet.Dockerfile | head -1)
-          [[ -n "$node_image" ]] || node_image="$ZTNET_NODE_IMAGE"
 
           {
             echo "zt_tag=$zt_tag"
             echo "zt_sha=$zt_sha"
             echo "controller_sha=$controller_sha"
-            echo "ztnet_tag=$ztnet_tag"
-            echo "ztnet_sha=$ztnet_sha"
-            echo "node_image=$node_image"
           } >> "$GITHUB_OUTPUT"
 
       - name: Update candidate pins
@@ -67,9 +57,6 @@ jobs:
           ZT_TAG: ${{ steps.upstream.outputs.zt_tag }}
           ZT_SHA: ${{ steps.upstream.outputs.zt_sha }}
           CONTROLLER_SHA: ${{ steps.upstream.outputs.controller_sha }}
-          ZTNET_TAG: ${{ steps.upstream.outputs.ztnet_tag }}
-          ZTNET_SHA: ${{ steps.upstream.outputs.ztnet_sha }}
-          NODE_IMAGE: ${{ steps.upstream.outputs.node_image }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -94,18 +81,12 @@ jobs:
           if vals.get('CONTROLLER_ZEROTIER_VERSION') and is_sha(vals.get('CONTROLLER_ZEROTIER_SOURCE_REF', '')):
               if vals['CONTROLLER_ZEROTIER_SOURCE_REF'].lower() != os.environ['CONTROLLER_SHA'].lower():
                   raise SystemExit('SECURITY: pinned Controller compatibility tag moved; manual review required')
-          if vals.get('ZTNET_VERSION') == os.environ['ZTNET_TAG'] and is_sha(vals.get('ZTNET_SOURCE_REF', '')):
-              if vals['ZTNET_SOURCE_REF'].lower() != os.environ['ZTNET_SHA'].lower():
-                  raise SystemExit('SECURITY: ZTNet release tag moved after it was pinned; manual review required')
 
           updates = {
               'PLANET_ZEROTIER_VERSION': os.environ['ZT_TAG'],
               'PLANET_ZEROTIER_SOURCE_REF': os.environ['ZT_SHA'],
               # Controller version is intentionally NOT auto-upgraded; only pin its current tag to a commit.
               'CONTROLLER_ZEROTIER_SOURCE_REF': os.environ['CONTROLLER_SHA'],
-              'ZTNET_VERSION': os.environ['ZTNET_TAG'],
-              'ZTNET_SOURCE_REF': os.environ['ZTNET_SHA'],
-              'ZTNET_NODE_IMAGE': os.environ['NODE_IMAGE'],
           }
           lines = text.splitlines()
           for i, line in enumerate(lines):
@@ -142,5 +123,5 @@ jobs:
               --head "$branch" \
               --base main \
               --title 'chore: validate newest upstream releases' \
-              --body $'Automated candidate update.\n\nCI, integration tests, persistence tests and upgrade tests must pass before merge. The standalone Controller compatibility version is intentionally not auto-upgraded.'
+              --body $'Automated ZeroTier PLANET candidate update.\n\nCI, integration tests, persistence tests and upgrade tests must pass before merge. The standalone Controller compatibility version is intentionally not auto-upgraded. ztncui is maintained in-repo; ztmkworld remains pinned separately as a build-time helper.'
           fi

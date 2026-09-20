@@ -11,7 +11,7 @@ wait_healthy() {
     sleep 2
   done
   docker compose ps || true
-  docker compose logs --no-color --tail=300 sovereign postgres || true
+  docker compose logs --no-color --tail=300 sovereign || true
   return 1
 }
 
@@ -46,10 +46,67 @@ docker compose exec -T sovereign curl -fsS \
   -H "X-ZT1-Auth: $token" \
   -X DELETE "http://127.0.0.1:9993/controller/network/$nwid" >/dev/null
 
-curl -fsS "http://127.0.0.1:${ZTNET_PORT:-3000}/" >/dev/null
+curl -fsS "http://127.0.0.1:${ZTNCUI_PORT:-3000}/" >/dev/null
 
-# Prisma migrations must have been applied to PostgreSQL.
-docker compose exec -T postgres psql -U "${POSTGRES_USER:-ztnet}" -d "${POSTGRES_DB:-ztnet}" -Atqc \
-  'select count(*) from "_prisma_migrations";' | grep -Eq '^[1-9][0-9]*$'
+# Verify the vendored ztncui controller client against the real Controller API.
+docker compose exec -T sovereign sh -lc '
+  cd /opt/ztncui
+  export ZT_ADDR=http://127.0.0.1:9993
+  export ZT_TOKEN="$(cat /data/controller/one/authtoken.secret)"
+  node <<'"'"'JS'"'"'
+const zt = require("./controllers/zt");
+(async () => {
+  const created = await zt.network_create({name: "ztncui-ci-smoke"});
+  if (!created || !created.nwid) throw new Error("ztncui did not create a network");
+  const listed = await zt.network_list();
+  if (!listed.some((n) => n.nwid === created.nwid)) throw new Error("ztncui network missing from list");
+  const detail = await zt.network_detail(created.nwid);
+  if (detail.name !== "ztncui-ci-smoke") throw new Error("unexpected ztncui network detail");
+  await zt.network_delete(created.nwid);
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+JS
+'
+
+# First boot must use a unique bootstrap password, never upstream admin/password.
+initial_password=$(docker compose exec -T sovereign sovereignctl ztncui-initial-password | tr -d '\r\n')
+[[ ${#initial_password} -ge 20 ]]
+
+headers=$(mktemp)
+cookies=$(mktemp)
+curl -sS -D "$headers" -o /dev/null -c "$cookies" \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'username=admin' \
+  --data-urlencode "password=$initial_password" \
+  "http://127.0.0.1:${ZTNCUI_PORT:-3000}/login"
+grep -Eq '^HTTP/[^ ]+ 302' "$headers"
+grep -Eqi '^location: /users/admin/password' "$headers"
+
+new_password='Sovereign-CI-Admin-Change-2026!'
+curl -fsS -b "$cookies" -c "$cookies" \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'username=admin' \
+  --data-urlencode "password1=$new_password" \
+  --data-urlencode "password2=$new_password" \
+  "http://127.0.0.1:${ZTNCUI_PORT:-3000}/users/admin/password" >/dev/null
+
+if docker compose exec -T sovereign sovereignctl ztncui-initial-password >/dev/null 2>&1; then
+  echo >&2 "bootstrap password file still exists after admin password change"
+  exit 1
+fi
+
+rm -f "$headers" "$cookies"
+headers=$(mktemp)
+curl -sS -D "$headers" -o /dev/null \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'username=admin' \
+  --data-urlencode "password=$new_password" \
+  "http://127.0.0.1:${ZTNCUI_PORT:-3000}/login"
+grep -Eq '^HTTP/[^ ]+ 302' "$headers"
+grep -Eqi '^location: /controller' "$headers"
+rm -f "$headers"
+
 
 echo "PASS integration smoke"

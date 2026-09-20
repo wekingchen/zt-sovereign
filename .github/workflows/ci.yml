@@ -18,15 +18,20 @@ jobs:
       - name: ShellCheck
         shell: bash
         run: |
-          mapfile -t files < <(find scripts tests rootfs/usr/local/bin -type f \( -name '*.sh' -o -perm -u+x \) ! -name '*.py' -print)
+          mapfile -t files < <(find scripts tests rootfs/usr/local/bin -type f \( -name '*.sh' -o -perm -u+x \) ! -name '*.py' ! -name '*.js' -print)
+          files+=(rootfs/usr/local/bin/sovereign-supervise)
           shellcheck "${files[@]}"
-      - name: Python syntax
-        run: python3 -m py_compile rootfs/usr/local/bin/file_server.py tests/unit/test_file_server.py
+      - name: Runtime script syntax
+        run: |
+          python3 -m py_compile tests/unit/test_file_server.py
+          node --check rootfs/usr/local/bin/file_server.js
+          find ui/ztncui/src -type f -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Unit tests
         run: ./tests/unit/run.sh
       - name: Ensure generated version fields are committed
         shell: bash
         run: |
+          ./scripts/sync-version-files.sh
           git diff --exit-code -- .env.example
 
   integration:
@@ -41,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -a; source versions.env; set +a
-          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF ZTNET_VERSION ZTNET_SOURCE_REF ZTNET_NODE_IMAGE; do
+          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
             echo "$v=${!v}" >> "$GITHUB_ENV"
           done
           if [[ "${{ github.event_name }}" == "push" ]]; then
@@ -55,9 +60,6 @@ jobs:
         run: |
           cp .env.example .env
           sed -i 's/^PLANET_IP_ADDR4=.*/PLANET_IP_ADDR4=127.0.0.1/' .env
-          sed -i 's/^ZTNET_AUTH_SECRET=.*/ZTNET_AUTH_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/' .env
-          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-password-do-not-use/' .env
-          sed -i 's#^ZTNET_URL=.*#ZTNET_URL=http://127.0.0.1:3000#' .env
 
       - name: Build amd64 image with persistent BuildKit cache
         uses: docker/build-push-action@v6
@@ -74,14 +76,40 @@ jobs:
             PLANET_ZEROTIER_SOURCE_REF=${{ env.PLANET_ZEROTIER_SOURCE_REF }}
             CONTROLLER_ZEROTIER_VERSION=${{ env.CONTROLLER_ZEROTIER_VERSION }}
             CONTROLLER_ZEROTIER_SOURCE_REF=${{ env.CONTROLLER_ZEROTIER_SOURCE_REF }}
-            ZTNET_VERSION=${{ env.ZTNET_VERSION }}
-            ZTNET_SOURCE_REF=${{ env.ZTNET_SOURCE_REF }}
-            NEXT_PUBLIC_APP_VERSION=${{ env.ZTNET_VERSION }}
-            NODEJS_IMAGE=${{ env.ZTNET_NODE_IMAGE }}
+            MKWORLD_SOURCE_REF=${{ env.MKWORLD_SOURCE_REF }}
+            NODEJS_IMAGE=${{ env.NODEJS_IMAGE }}
           cache-from: |
             type=gha,scope=sovereign-amd64-main
             type=gha,scope=unified
           cache-to: type=gha,mode=max,scope=${{ env.BUILD_CACHE_SCOPE }}
+
+      - name: Report runtime image footprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          bytes="$(docker image inspect zerotier-sovereign:local --format '{{.Size}}')"
+          mib="$(( (bytes + 1048575) / 1048576 ))"
+          echo "Runtime image size: ${bytes} bytes (${mib} MiB)"
+          report="$(mktemp)"
+          {
+            echo "### Runtime image footprint"
+            echo
+            echo "- Total uncompressed image size: **${mib} MiB** (${bytes} bytes)"
+            echo
+            echo '~~~text'
+            docker history --format '{{.Size}}\t{{.CreatedBy}}' zerotier-sovereign:local | head -n 20
+            echo '~~~'
+            echo
+            echo '~~~text'
+            docker run --rm --entrypoint /bin/bash zerotier-sovereign:local -lc '
+              du -sh /opt/ztncui /opt/ztncui/node_modules /opt/zerotier-planet /opt/zerotier-controller /usr/local/lib/node_modules 2>/dev/null || true
+              echo
+              apk info -v | sort | head -n 50
+            '
+            echo '~~~'
+          } | tee "$report"
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$report"
 
       - name: Start stack
         run: docker compose up -d --no-build

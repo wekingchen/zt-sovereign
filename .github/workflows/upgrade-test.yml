@@ -57,11 +57,8 @@ jobs:
         run: |
           cp .env.example .env
           sed -i 's/^PLANET_IP_ADDR4=.*/PLANET_IP_ADDR4=127.0.0.1/' .env
-          sed -i 's/^ZTNET_AUTH_SECRET=.*/ZTNET_AUTH_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/' .env
-          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=upgrade-ci-only-password/' .env
-          sed -i 's#^ZTNET_URL=.*#ZTNET_URL=http://127.0.0.1:3000#' .env
 
-      - name: Reuse DB and state across image upgrade
+      - name: Migrate persistent state across architecture upgrade
         if: env.BASE_UNIFIED == 'true'
         env:
           CI: "true"

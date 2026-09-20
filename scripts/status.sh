@@ -14,4 +14,4 @@ docker compose exec -T sovereign sovereignctl version || true
 
 echo
 echo "--- Persistent paths ---"
-du -sh data/planet data/controller data/postgres 2>/dev/null || true
+du -sh data/planet data/controller data/ztncui 2>/dev/null || true

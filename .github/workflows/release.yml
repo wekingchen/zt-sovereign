@@ -6,7 +6,7 @@ on:
   workflow_call:
     inputs:
       release_tag:
-        description: 'Existing release tag to publish, e.g. v0.3.0'
+        description: 'Existing release tag to publish, e.g. v0.4.0'
         required: false
         type: string
 
@@ -48,16 +48,13 @@ jobs:
             echo "Release tag $RELEASE_TAG does not match versions.env $expected" >&2
             exit 1
           }
-          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF ZTNET_VERSION ZTNET_SOURCE_REF ZTNET_NODE_IMAGE; do
+          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
             echo "$v=${!v}" >> "$GITHUB_ENV"
           done
           echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
           echo "short_sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
           cp .env.example .env
           sed -i 's/^PLANET_IP_ADDR4=.*/PLANET_IP_ADDR4=127.0.0.1/' .env
-          sed -i 's/^ZTNET_AUTH_SECRET=.*/ZTNET_AUTH_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/' .env
-          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=release-ci-only-password/' .env
-          sed -i 's#^ZTNET_URL=.*#ZTNET_URL=http://127.0.0.1:3000#' .env
 
       - name: Unit tests
         run: ./tests/unit/run.sh
@@ -77,10 +74,8 @@ jobs:
             PLANET_ZEROTIER_SOURCE_REF=${{ env.PLANET_ZEROTIER_SOURCE_REF }}
             CONTROLLER_ZEROTIER_VERSION=${{ env.CONTROLLER_ZEROTIER_VERSION }}
             CONTROLLER_ZEROTIER_SOURCE_REF=${{ env.CONTROLLER_ZEROTIER_SOURCE_REF }}
-            ZTNET_VERSION=${{ env.ZTNET_VERSION }}
-            ZTNET_SOURCE_REF=${{ env.ZTNET_SOURCE_REF }}
-            NEXT_PUBLIC_APP_VERSION=${{ env.ZTNET_VERSION }}
-            NODEJS_IMAGE=${{ env.ZTNET_NODE_IMAGE }}
+            MKWORLD_SOURCE_REF=${{ env.MKWORLD_SOURCE_REF }}
+            NODEJS_IMAGE=${{ env.NODEJS_IMAGE }}
           cache-from: |
             type=gha,scope=sovereign-amd64-main
             type=gha,scope=unified
@@ -96,21 +91,6 @@ jobs:
       - name: Stop local verification stack
         if: always()
         run: docker compose down -v || true
-
-      - name: Upgrade test from current stable when available
-        shell: bash
-        env:
-          CI: "true"
-          NEW_IMAGE: zerotier-sovereign:local
-        run: |
-          set -euo pipefail
-          stable="${{ steps.vars.outputs.image }}:stable"
-          if docker pull "$stable" >/dev/null 2>&1; then
-            OLD_IMAGE="$stable" ./tests/upgrade/ztnet-upgrade.sh
-            docker compose down -v || true
-          else
-            echo "No existing stable image; first-release upgrade test skipped."
-          fi
 
   build:
     needs: verify
@@ -144,7 +124,7 @@ jobs:
         shell: bash
         run: |
           set -a; source versions.env; set +a
-          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF ZTNET_VERSION ZTNET_SOURCE_REF ZTNET_NODE_IMAGE; do
+          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
             echo "$v=${!v}" >> "$GITHUB_ENV"
           done
           echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
@@ -164,10 +144,8 @@ jobs:
             PLANET_ZEROTIER_SOURCE_REF=${{ env.PLANET_ZEROTIER_SOURCE_REF }}
             CONTROLLER_ZEROTIER_VERSION=${{ env.CONTROLLER_ZEROTIER_VERSION }}
             CONTROLLER_ZEROTIER_SOURCE_REF=${{ env.CONTROLLER_ZEROTIER_SOURCE_REF }}
-            ZTNET_VERSION=${{ env.ZTNET_VERSION }}
-            ZTNET_SOURCE_REF=${{ env.ZTNET_SOURCE_REF }}
-            NEXT_PUBLIC_APP_VERSION=${{ env.ZTNET_VERSION }}
-            NODEJS_IMAGE=${{ env.ZTNET_NODE_IMAGE }}
+            MKWORLD_SOURCE_REF=${{ env.MKWORLD_SOURCE_REF }}
+            NODEJS_IMAGE=${{ env.NODEJS_IMAGE }}
           tags: |
             ${{ steps.vars.outputs.image }}:${{ inputs.release_tag || github.ref_name }}-${{ matrix.arch }}
             ${{ steps.vars.outputs.image }}:sha-${{ steps.vars.outputs.short_sha }}-${{ matrix.arch }}
