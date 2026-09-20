@@ -1,6 +1,6 @@
-# Validation status — v0.5.0 candidate
+# Validation status — v0.6.0 candidate
 
-v0.5.0 的发布判断以 GitHub Actions 的真实构建和运行结果为准，不以静态代码审查代替运行验证。
+v0.6.0 的发布判断以 GitHub Actions 的真实构建和运行结果为准，不以静态代码审查代替运行验证。
 
 ## 已建立的验证层
 
@@ -9,6 +9,7 @@ v0.5.0 的发布判断以 GitHub Actions 的真实构建和运行结果为准，
 - ShellCheck
 - Bash / Python / JavaScript syntax
 - ztncui 简体中文界面回归检查（禁止常见英文 UI 文案重新出现）
+- ztncui 现代响应式 UI 回归检查（viewport、设计组件、响应式表格与关键功能钩子）
 - PLANET 初始化、ensure、regenerate
 - identity / signing key 持久化
 - World timestamp 单调递增
@@ -22,7 +23,7 @@ CI 会在 GitHub 原生 amd64 Runner 上：
 
 - 从固定源码 commit 只构建一份 ZeroTier 1.16.2 二进制，并启用 `ZT_NONFREE=1`；
 - PLANET 与 Controller 两个启动器必须使用同一个 `/opt/zerotier/zerotier-one` 文件；
-- 构建项目内维护的简体中文 ztncui；
+- 构建项目内维护的简体中文现代化 ztncui，并编译全部 Pug 模板；
 - 启动完整单容器运行栈；
 - 校验 PLANET 文件服务；
 - 通过真实 Controller REST API 创建/读取/删除测试 Network；
@@ -48,13 +49,13 @@ PR 会分别构建 base 与 candidate，并真实执行 old -> new 切换。base
 
 main CI 通过后，Candidate workflow 使用 GitHub 原生 ARM64 Runner 构建并启动 ARM64 镜像，执行同一套集成与重启持久化测试，不使用 QEMU 作为运行验证。
 
-## v0.5.0 发布门槛
+## v0.6.0 发布门槛
 
-1. 直接面向 `main` 的 v0.5.0 candidate PR：CI 全绿。
-2. 同一 PR：Upgrade Test 全绿，证明真实 main/base -> v0.5.0 迁移。
+1. 直接面向 `main` 的 v0.6.0 candidate PR：CI 全绿。
+2. 同一 PR：Upgrade Test 全绿，证明真实 main/base -> v0.6.0 迁移。
 3. 合并 main 后：多架构 `candidate` 成功发布，ARM64 smoke 全绿。
 4. 个人研究环境手工试运行。
-5. 创建 `v0.5.0` tag。
+5. 创建 `v0.6.0` tag。
 6. Release workflow 全绿并发布不可变镜像。
 7. 最后手工 Promote Stable。
 
