@@ -156,9 +156,7 @@ COPY --from=ztmkworld_builder /usr/local/bin/ztmkworld /usr/local/bin/ztmkworld
 RUN sed -i 's#npx prisma#/app/node_modules/.bin/prisma#g' /app/init-db.sh \
     && chmod +x /app/init-db.sh \
     && touch /app/.env \
-    && /app/node_modules/.bin/prisma generate \
-    && rm -rf /root/.npm /usr/local/lib/node_modules/npm \
-    && rm -f /usr/local/bin/npm /usr/local/bin/npx
+    && /app/node_modules/.bin/prisma generate
 
 # Keep the two ZeroTier installations physically separate inside the same image.
 RUN mkdir -p /opt/zerotier-planet /opt/zerotier-controller /usr/local/share/zerotier-sovereign
