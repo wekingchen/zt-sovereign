@@ -19,9 +19,8 @@ Controller ZeroTier:
   version: $(readf "$SHARE/controller-zerotier-version")
   commit:  $(readf "$SHARE/controller-zerotier-commit")
 
-ZTNet:
-  ref:     $(readf "$SHARE/ztnet-ref")
-  commit:  $(readf "$SHARE/ztnet-commit")
+ztncui:
+  source:  vendored in ui/ztncui
 
 Architecture:
   $(uname -s)/$(uname -m)
@@ -41,7 +40,7 @@ controller_status() {
 
 process_status() {
   local run_dir=/run/sovereign name pid state
-  for name in planet controller planet-files ztnet ztncui; do
+  for name in planet controller planet-files ztncui; do
     pid=""
     [[ -s "$run_dir/$name.pid" ]] && pid=$(<"$run_dir/$name.pid")
     if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
@@ -78,7 +77,7 @@ Usage: sovereignctl <command>
 
 Commands:
   version             Show embedded component versions and source commits.
-  status              Show process, PLANET, Controller and ZTNet status.
+  status              Show process, PLANET, Controller and ztncui status.
   health              Run the container health checks now.
   planet <command>    Pass through to planetctl.
   controller-status   Query the local Controller service API.
