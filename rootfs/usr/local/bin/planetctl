@@ -50,31 +50,44 @@ validate_signing_keys() {
 }
 write_moon_json() {
   local endpoints_file="$WORLD_DIR/endpoints.json"
-  python3 - "$WORLD_DIR/moon.json" "$endpoints_file" "${PLANET_IP_ADDR4:-}" "${PLANET_IP_ADDR6:-}" "$ZT_PORT" <<'PY'
-import json, sys
-moon_path, endpoints_path, ip4, ip6, port = sys.argv[1:]
-data=json.load(open(moon_path, encoding='utf-8'))
-endpoints=[]
-if ip4: endpoints.append(f"{ip4}/{port}")
-if ip6: endpoints.append(f"{ip6}/{port}")
-if not data.get('roots'): raise SystemExit('moon.json contains no roots')
-data['roots'][0]['stableEndpoints']=endpoints
-json.dump(data, open(moon_path,'w',encoding='utf-8'), indent=2, ensure_ascii=False)
-json.dump(endpoints, open(endpoints_path,'w',encoding='utf-8'), indent=2)
-PY
+  node - "$WORLD_DIR/moon.json" "$endpoints_file" "${PLANET_IP_ADDR4:-}" "${PLANET_IP_ADDR6:-}" "$ZT_PORT" <<'JS'
+const fs = require("fs");
+const [moonPath, endpointsPath, ip4, ip6, port] = process.argv.slice(2);
+const data = JSON.parse(fs.readFileSync(moonPath, "utf8"));
+const endpoints = [];
+if (ip4) endpoints.push(`${ip4}/${port}`);
+if (ip6) endpoints.push(`${ip6}/${port}`);
+if (!Array.isArray(data.roots) || data.roots.length === 0) {
+  throw new Error("moon.json contains no roots");
+}
+data.roots[0].stableEndpoints = endpoints;
+fs.writeFileSync(moonPath, JSON.stringify(data, null, 2) + "\n");
+fs.writeFileSync(endpointsPath, JSON.stringify(endpoints, null, 2) + "\n");
+JS
 }
 write_world_config() {
   local ts=$1
-  python3 - "$WORLD_DIR/moon.json" "$WORLD_DIR/mkworld.config.json" "$ts" "$WORLD_ID" <<'PY'
-import json, sys
-moon_path, out_path, timestamp, world_id = sys.argv[1:]
-moon=json.load(open(moon_path, encoding='utf-8'))
-roots=moon.get("roots") or []
-if not roots: raise SystemExit("moon.json contains no roots")
-root_nodes=[{"comments":"zt-sovereign","identity":r["identity"],"endpoints":r.get("stableEndpoints") or []} for r in roots]
-cfg={"signing":["previous.c25519","current.c25519"],"output":"world.bin","rootNodes":root_nodes,"plID":int(world_id),"plBirth":int(timestamp),"plRecommend":False}
-json.dump(cfg, open(out_path,'w',encoding='utf-8'), indent=2, ensure_ascii=False)
-PY
+  node - "$WORLD_DIR/moon.json" "$WORLD_DIR/mkworld.config.json" "$ts" "$WORLD_ID" <<'JS'
+const fs = require("fs");
+const [moonPath, outPath, timestamp, worldId] = process.argv.slice(2);
+const moon = JSON.parse(fs.readFileSync(moonPath, "utf8"));
+const roots = Array.isArray(moon.roots) ? moon.roots : [];
+if (roots.length === 0) throw new Error("moon.json contains no roots");
+const rootNodes = roots.map((r) => ({
+  comments: "zt-sovereign",
+  identity: r.identity,
+  endpoints: Array.isArray(r.stableEndpoints) ? r.stableEndpoints : [],
+}));
+const cfg = {
+  signing: ["previous.c25519", "current.c25519"],
+  output: "world.bin",
+  rootNodes,
+  plID: Number(worldId),
+  plBirth: Number(timestamp),
+  plRecommend: false,
+};
+fs.writeFileSync(outPath, JSON.stringify(cfg, null, 2) + "\n");
+JS
 }
 generate_artifacts() {
   require_endpoints
