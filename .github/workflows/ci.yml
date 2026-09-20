@@ -83,6 +83,31 @@ jobs:
             type=gha,scope=unified
           cache-to: type=gha,mode=max,scope=${{ env.BUILD_CACHE_SCOPE }}
 
+      - name: Report runtime image footprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          bytes="$(docker image inspect zerotier-sovereign:local --format '{{.Size}}')"
+          mib="$(( (bytes + 1048575) / 1048576 ))"
+          echo "Runtime image size: ${bytes} bytes (${mib} MiB)"
+          {
+            echo "### Runtime image footprint"
+            echo
+            echo "- Total uncompressed image size: **${mib} MiB** (${bytes} bytes)"
+            echo
+            echo '~~~text'
+            docker history --format '{{.Size}}\t{{.CreatedBy}}' zerotier-sovereign:local | head -n 20
+            echo '~~~'
+            echo
+            echo '~~~text'
+            docker run --rm --entrypoint /bin/bash zerotier-sovereign:local -lc '
+              du -sh /app /app/node_modules /app/.next /opt/zerotier-planet /opt/zerotier-controller /usr/lib/postgresql 2>/dev/null || true
+              echo
+              dpkg-query -W -f="${Installed-Size}\t${Package}\n" 2>/dev/null | sort -nr | head -n 25
+            '
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Start stack
         run: docker compose up -d --no-build
 
