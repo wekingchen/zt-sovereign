@@ -19,6 +19,12 @@ Source: https://github.com/sinamics/ztnet
 
 ZTNet repository declares GPL-3.0 licensing. 本项目从固定 release/commit 源码构建 ZTNet，并记录实际 source commit。
 
+## ztncui
+
+Source: https://github.com/key-networks/ztncui
+
+本项目已将固定 commit `1b2284864de48d2dcae22582fff122fe24909c3d` 的 ztncui 源码导入 `ui/ztncui/`，后续直接在本仓库维护，不再作为构建时动态拉取的外部依赖。原始 GNU GPL v3 许可证保留在 `ui/ztncui/LICENSE`。
+
 ## PostgreSQL
 
 Source: https://www.postgresql.org/
