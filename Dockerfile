@@ -67,15 +67,19 @@ FROM ztnet_base AS ztnet_deps
 WORKDIR /app
 COPY --from=ztnet_source /src/package.json /src/package-lock.json ./
 COPY --from=ztnet_source /src/prisma ./prisma
-# Use the release's lock file. Do not pin Prisma independently from upstream.
-RUN npm ci && npx prisma generate
+# The image is built natively per architecture, so keep only the current
+# architecture's Prisma engine instead of bundling amd64 + arm64 together.
+RUN sed -i 's/binaryTargets = .*/binaryTargets = ["native"]/' prisma/schema.prisma \
+    && npm ci \
+    && npx prisma generate
 
 FROM ztnet_base AS ztnet_builder
 ARG NEXT_PUBLIC_APP_VERSION
 WORKDIR /app
 COPY --from=ztnet_deps /app/node_modules ./node_modules
 COPY --from=ztnet_source /src ./
-RUN SKIP_ENV_VALIDATION=1 npm run build
+RUN sed -i 's/binaryTargets = .*/binaryTargets = ["native"]/' prisma/schema.prisma \
+    && SKIP_ENV_VALIDATION=1 npm run build
 
 FROM ztnet_base AS ztmkworld_builder
 ARG TARGETPLATFORM
