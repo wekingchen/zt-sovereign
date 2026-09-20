@@ -18,22 +18,26 @@ html(lang='zh-CN')
   head
     title= title
     meta(charset='utf-8')
-    meta(name='viewport', content='width=device-width, initial-scale=1')
+    meta(name='viewport', content='width=device-width, initial-scale=1, viewport-fit=cover')
+    meta(name='theme-color', content='#0b1220')
     link(rel='stylesheet', href='/bscss/bootstrap.min.css')
     link(rel='stylesheet', href='/stylesheets/style.css')
     script(src='/jqjs/jquery.min.js')
     script(src='/bsjs/bootstrap.min.js')
   body
     nav.navbar.navbar-inverse.navbar-fixed-top
-      .container-fluid
+      .container-fluid.app-container
         .navbar-header
-          button.navbar-toggle(type='button' data-toggle='collapse' data-target='#BarNav')
+          button.navbar-toggle(type='button' data-toggle='collapse' data-target='#BarNav' aria-expanded='false' aria-label='展开导航')
             span.icon-bar
             span.icon-bar
             span.icon-bar
-          a.navbar-brand(href='https://key-networks.com' target='_blank')
-            img(src='/images/key-logo.svg' alt='Key Networks 标志' height='25px' width='25px' style='display: inline')
-            |  Key Networks
+          a.navbar-brand(href='/controller')
+            span.brand-mark
+              i.glyphicon.glyphicon-random
+            span.brand-copy
+              span.brand-title ZeroTier Sovereign
+              span.brand-subtitle 网络控制台
         .collapse.navbar-collapse(id='BarNav')
           ul.nav.navbar-nav
             block nav_items
@@ -41,6 +45,10 @@ html(lang='zh-CN')
             li
               block nav_login
                 a(href='/logout')
-                  span.glyphicon.glyphicon-log-out
-                  |  退出登录
+                  span.glyphicon.glyphicon-log-out.nav-icon
+                  | 退出登录
     block body_content
+    footer.app-footer
+      .container.app-container
+        strong ZeroTier Sovereign
+        |  · 基于项目维护版 ztncui
