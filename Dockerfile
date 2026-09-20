@@ -72,7 +72,7 @@ RUN case "${TARGETPLATFORM}" in \
 # -----------------------------------------------------------------------------
 ARG NODEJS_IMAGE
 FROM ${NODEJS_IMAGE} AS runtime
-ARG SOVEREIGN_VERSION=0.5.0
+ARG SOVEREIGN_VERSION=0.6.0
 ARG ZEROTIER_VERSION=1.16.2
 
 ENV NODE_ENV=production \
