@@ -11,13 +11,19 @@ version() {
   cat <<TXT
 ZeroTier Sovereign $(readf "$SHARE/version")
 
-PLANET ZeroTier:
-  version: $(readf "$SHARE/planet-zerotier-version")
-  commit:  $(readf "$SHARE/planet-zerotier-commit")
+ZeroTier runtime:
+  version: $(readf "$SHARE/zerotier-version")
+  commit:  $(readf "$SHARE/zerotier-commit")
+  binary:  /opt/zerotier/zerotier-one
+  mode:    one shared binary, two isolated processes (PLANET + Controller)
 
-Controller ZeroTier:
-  version: $(readf "$SHARE/controller-zerotier-version")
-  commit:  $(readf "$SHARE/controller-zerotier-commit")
+PLANET process:
+  home:    ${PLANET_HOME:-/data/planet/one}
+  port:    ${PLANET_ZT_PORT:-9994}
+
+Controller process:
+  home:    ${CONTROLLER_HOME:-/data/controller/one}
+  port:    ${CONTROLLER_ZT_PORT:-9993}
 
 ztncui:
   source:  maintained in-repo (ui/ztncui)

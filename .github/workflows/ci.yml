@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -a; source versions.env; set +a
-          for v in SOVEREIGN_VERSION PLANET_ZEROTIER_VERSION PLANET_ZEROTIER_SOURCE_REF CONTROLLER_ZEROTIER_VERSION CONTROLLER_ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
+          for v in SOVEREIGN_VERSION ZEROTIER_VERSION ZEROTIER_SOURCE_REF MKWORLD_SOURCE_REF NODEJS_IMAGE; do
             echo "$v=${!v}" >> "$GITHUB_ENV"
           done
           if [[ "${{ github.event_name }}" == "push" ]]; then
@@ -72,10 +72,8 @@ jobs:
           tags: zerotier-sovereign:local
           build-args: |
             SOVEREIGN_VERSION=${{ env.SOVEREIGN_VERSION }}
-            PLANET_ZEROTIER_VERSION=${{ env.PLANET_ZEROTIER_VERSION }}
-            PLANET_ZEROTIER_SOURCE_REF=${{ env.PLANET_ZEROTIER_SOURCE_REF }}
-            CONTROLLER_ZEROTIER_VERSION=${{ env.CONTROLLER_ZEROTIER_VERSION }}
-            CONTROLLER_ZEROTIER_SOURCE_REF=${{ env.CONTROLLER_ZEROTIER_SOURCE_REF }}
+            ZEROTIER_VERSION=${{ env.ZEROTIER_VERSION }}
+            ZEROTIER_SOURCE_REF=${{ env.ZEROTIER_SOURCE_REF }}
             MKWORLD_SOURCE_REF=${{ env.MKWORLD_SOURCE_REF }}
             NODEJS_IMAGE=${{ env.NODEJS_IMAGE }}
           cache-from: |
@@ -102,7 +100,7 @@ jobs:
             echo
             echo '~~~text'
             docker run --rm --entrypoint /bin/bash zerotier-sovereign:local -lc '
-              du -sh /opt/ztncui /opt/ztncui/node_modules /opt/zerotier-planet /opt/zerotier-controller /usr/local/lib/node_modules 2>/dev/null || true
+              du -sh /opt/ztncui /opt/ztncui/node_modules /opt/zerotier /usr/local/lib/node_modules 2>/dev/null || true
               echo
               apk info -v | sort | head -n 50
             '

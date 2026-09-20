@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-exec /opt/zerotier-planet/zerotier-one -p"${PLANET_ZT_PORT:-9994}" "${PLANET_HOME:-/data/planet/one}"
+# Shared binary, isolated PLANET process/home/identity.
+exec /opt/zerotier/zerotier-one -p"${PLANET_ZT_PORT:-9994}" "${PLANET_HOME:-/data/planet/one}"

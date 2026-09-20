@@ -6,10 +6,11 @@
 
 Source: https://github.com/zerotier/ZeroTierOne
 
-当前验证基线同时使用 ZeroTier 1.16.2：
+当前验证基线只构建一份 ZeroTier 1.16.2 二进制：
 
-- PLANET / Root：开放 Agent 构建，不启用 Controller。
-- Standalone Controller：启用 `ZT_NONFREE=1`，使用 `nonfree/controller` 中的 FileDB Controller。
+- Build: `make ZT_NONFREE=1`，包含 `nonfree/controller` 中的 FileDB Controller。
+- Runtime: 同一个 `/opt/zerotier/zerotier-one` 分别启动 PLANET 与 Controller 两个独立进程。
+- Isolation: 两个进程使用不同端口、identity、home 与持久化目录。
 - Pinned source commit: `fc5c3ec22090b5b2a0f274e863651fe9ca489bf4`
 
 ZeroTier 1.16.2 的 `nonfree/LICENSE.md` 将 Controller 定义为 source-available 组件，并允许其定义范围内的个人非商业、教育研究及有限评估用途；商业使用需要另行获得 ZeroTier 授权。本项目不面向商业、组织生产或服务化使用。
@@ -20,7 +21,7 @@ ZeroTier 1.16.2 的 `nonfree/LICENSE.md` 将 Controller 定义为 source-availab
 /usr/local/share/zerotier-sovereign/ZEROTIER-NONFREE-LICENSE.md
 ```
 
-Upstream Check 可以提出新的 ZeroTier 正式版本候选，但不会自动合并。PLANET 与 Controller 更新必须经过 CI、真实 Controller API、ztncui CRUD、重启持久化与升级测试。
+Upstream Check 可以提出新的共享 ZeroTier 正式版本候选，但不会自动合并。更新必须经过 CI、真实 Controller API、ztncui CRUD、重启持久化与升级测试。
 
 ## ztncui
 

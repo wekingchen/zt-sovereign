@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.2
+
+- 将 PLANET 与 Controller 的两个 ZeroTier 构建阶段收敛为一个共享 `zerotier_builder`。
+- 只编译、存储一份 `ZeroTier 1.16.2 + ZT_NONFREE=1` 二进制，运行时启动 PLANET 与 Controller 两个独立进程。
+- 两个进程继续使用独立端口、identity、home 和持久化目录，不合并信任身份。
+- 版本 pin 收敛为 `ZEROTIER_VERSION` 与 `ZEROTIER_SOURCE_REF`，Upstream Check 只维护一套 ZeroTier 候选。
+- 删除运行镜像中重复的 `/opt/zerotier-planet` / `/opt/zerotier-controller`，统一为 `/opt/zerotier`。
+- 保持 ZeroTier Controller source-available 许可文本与个人非商业研究用途边界。
+
+
 ## v0.4.1
 
 - Standalone Controller 从 ZeroTier 1.14.2 升级到 1.16.2，与 PLANET 使用同一正式版本基线。
