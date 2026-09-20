@@ -25,6 +25,7 @@ jobs:
         run: |
           python3 -m py_compile tests/unit/test_file_server.py
           node --check rootfs/usr/local/bin/file_server.js
+          find ui/ztncui/src -type f -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Unit tests
         run: ./tests/unit/run.sh
       - name: Ensure generated version fields are committed
@@ -105,7 +106,7 @@ jobs:
             echo
             echo '~~~text'
             docker run --rm --entrypoint /bin/bash zerotier-sovereign:local -lc '
-              du -sh /app /app/node_modules /app/.next /opt/zerotier-planet /opt/zerotier-controller /usr/local/lib/node_modules 2>/dev/null || true
+              du -sh /app /app/node_modules /app/.next /opt/ztncui /opt/ztncui/node_modules /opt/zerotier-planet /opt/zerotier-controller /usr/local/lib/node_modules 2>/dev/null || true
               du -sh /usr/lib/postgresql* 2>/dev/null || true
               echo
               if command -v dpkg-query >/dev/null 2>&1; then
