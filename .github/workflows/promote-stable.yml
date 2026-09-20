@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Already-published immutable release tag, e.g. v0.3.0'
+        description: 'Already-published immutable release tag, e.g. v0.4.0'
         required: true
         type: string
 
