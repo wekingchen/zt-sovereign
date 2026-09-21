@@ -9,7 +9,7 @@ v0.6.0 的发布判断以 GitHub Actions 的真实构建和运行结果为准，
 - ShellCheck
 - Bash / Python / JavaScript syntax
 - ztncui 简体中文界面回归检查（禁止常见英文 UI 文案重新出现）
-- ztncui 现代响应式 UI 回归检查（viewport、设计组件、响应式表格与关键功能钩子）
+- ztncui 现代响应式 UI 回归检查（viewport、设计组件、关键功能钩子、iOS Safe Area、动态 viewport、16px 输入框与无强制横向表格宽度）
 - PLANET 初始化、ensure、regenerate
 - identity / signing key 持久化
 - World timestamp 单调递增

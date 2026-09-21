@@ -17,7 +17,7 @@ block users_heading_action
 block users_content
   if users && Object.keys(users).length
     .table-responsive
-      table.table.table-striped.table-hover
+      table.table.table-striped.table-hover.mobile-stack
         thead
           tr
             th 管理员
@@ -25,9 +25,9 @@ block users_content
         tbody
           each user in users
             tr
-              td
+              td(data-label='管理员')
                 strong= user.name
-              td
+              td.mobile-actions(data-label='操作')
                 .table-actions
                   a.btn.btn-default.btn-sm(href='/users/' + user.name + '/password') 设置密码
                   a.btn.btn-link.btn-sm.btn-link-danger(href='/users/' + user.name + '/delete')

@@ -7,7 +7,7 @@ extends network_layout
 
 block net_content
   .table-responsive
-    table.table.table-striped.table-hover
+    table.table.table-striped.table-hover.mobile-stack
       thead
         tr
           th 目标网段
@@ -16,9 +16,9 @@ block net_content
       tbody
         each route in network.routes
           tr
-            td.mono-text= route.target
-            td.mono-text= route.via
-            td
+            td.mono-text(data-label='目标网段')= route.target
+            td.mono-text(data-label='网关')= route.via
+            td.mobile-actions(data-label='操作')
               a.btn.btn-link.btn-sm.btn-link-danger(href='/controller/network/' + network.nwid + '/routes/' + route.target + '/delete')
                 span.glyphicon.glyphicon-trash.nav-icon
                 | 删除

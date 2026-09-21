@@ -16,6 +16,10 @@ member_detail = (views / "member_detail.pug").read_text(encoding="utf-8")
 member_delete = (views / "member_delete.pug").read_text(encoding="utf-8")
 not_implemented = (views / "not_implemented.pug").read_text(encoding="utf-8")
 network_detail = (views / "network_detail.pug").read_text(encoding="utf-8")
+routes = (views / "routes.pug").read_text(encoding="utf-8")
+users = (views / "users.pug").read_text(encoding="utf-8")
+pools = (views / "ipAssignmentPools.pug").read_text(encoding="utf-8")
+assignments = (views / "ipAssignments.pug").read_text(encoding="utf-8")
 
 required_css = [
     "--zt-primary:",
@@ -30,6 +34,11 @@ required_css = [
     ".setting-row",
     ".context-header",
     ".btn-link-danger",
+    ".mobile-stack",
+    "safe-area-inset-top",
+    "safe-area-inset-bottom",
+    "100dvh",
+    "@media (max-width: 359px)",
     "@media (max-width: 767px)",
 ]
 errors = [f"style.css missing {token}" for token in required_css if token not in css]
@@ -41,6 +50,16 @@ required_head = [
     "app-footer",
 ]
 errors += [f"head_layout.pug missing {token}" for token in required_head if token not in head]
+
+for token in ("apple-mobile-web-app-capable", "black-translucent", "telephone=no"):
+    if token not in head:
+        errors.append(f"head_layout.pug missing iOS metadata {token}")
+
+if "min-width: 720px" in css:
+    errors.append("mobile CSS must not force 720px tables")
+
+if 'font-size: 16px;' not in css:
+    errors.append("mobile form controls must use 16px font size to avoid iOS focus zoom")
 
 # Bootstrap's table-responsive class belongs on a wrapper, not on <table>.
 for path in views.glob("*.pug"):
@@ -78,6 +97,19 @@ if "返回成员列表" in member_delete:
     errors.append("member_delete.pug has duplicate return action")
 if "返回成员列表" in not_implemented:
     errors.append("not_implemented.pug has duplicate return action")
+
+for name, text in {
+    "networks.pug": networks,
+    "users.pug": users,
+    "routes.pug": routes,
+    "ipAssignmentPools.pug": pools,
+    "ipAssignments.pug": assignments,
+    "network_detail.pug": network_detail,
+}.items():
+    if "mobile-stack" not in text:
+        errors.append(f"{name}: mobile card table class missing")
+    if "data-label=" not in text:
+        errors.append(f"{name}: mobile field labels missing")
 
 if errors:
     print("\n".join(errors))

@@ -25,7 +25,7 @@ block net_content
         p.muted 管理此成员的受管 IP 地址
 
     .table-responsive
-      table.table.table-striped.table-hover
+      table.table.table-striped.table-hover.mobile-stack
         thead
           tr
             th IP 地址
@@ -33,15 +33,15 @@ block net_content
         tbody
           each ipAssignment, index in member.ipAssignments
             tr
-              td.mono-text= ipAssignment
-              td
+              td.mono-text(data-label='IP 地址')= ipAssignment
+              td.mobile-actions(data-label='操作')
                 a.btn.btn-link.btn-sm.btn-link-danger(role='button' href='/controller/network/' + network.nwid + '/member/' + member.id + '/ipAssignments/' + index + '/delete')
                   span.glyphicon.glyphicon-trash.nav-icon
                   | 删除
-          tr
-            td
+          tr.mobile-add-row
+            td(data-label='新增 IP')
               input#ipAddress.form-control(type='text' name='ipAddress' placeholder='输入 IP 地址' value=(undefined===ipAssignment? '' : ipAssignment.ipAddress))
-            td
+            td.mobile-actions(data-label='操作')
               button.btn.btn-primary.btn-sm(type='submit')
                 span.glyphicon.glyphicon-plus.nav-icon
                 | 添加
@@ -53,7 +53,7 @@ block net_content
       a.btn.btn-default.btn-sm(href='/controller/network/' + network.nwid + '/routes') 管理路由
 
     .table-responsive
-      table.table.table-striped.table-hover
+      table.table.table-striped.table-hover.mobile-stack
         thead
           tr
             th 目标网段
@@ -62,9 +62,9 @@ block net_content
         tbody
           each route in network.routes
             tr
-              td.mono-text= route.target
-              td.mono-text= route.via
-              td
+              td.mono-text(data-label='目标网段')= route.target
+              td.mono-text(data-label='网关')= route.via
+              td.mobile-actions(data-label='操作')
                 a.btn.btn-link.btn-sm.btn-link-danger(role='button' href='/controller/network/' + network.nwid + '/routes/' + route.target + '/delete')
                   span.glyphicon.glyphicon-trash.nav-icon
                   | 删除
