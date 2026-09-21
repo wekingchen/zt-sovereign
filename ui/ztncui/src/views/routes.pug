@@ -10,17 +10,18 @@ block net_content
     table.table.table-striped.table-hover
       thead
         tr
-          th
           th 目标网段
           th 网关
+          th 操作
       tbody
         each route in network.routes
           tr
-            td
-              a.btn.btn-link.btn-sm(href='/controller/network/' + network.nwid + '/routes/' + route.target + '/delete' title='删除路由')
-                i.glyphicon.glyphicon-trash
             td.mono-text= route.target
             td.mono-text= route.via
+            td
+              a.btn.btn-link.btn-sm.btn-link-danger(href='/controller/network/' + network.nwid + '/routes/' + route.target + '/delete')
+                span.glyphicon.glyphicon-trash.nav-icon
+                | 删除
 
   .section-heading
     div
