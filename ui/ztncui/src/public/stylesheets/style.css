@@ -1371,7 +1371,7 @@ textarea {
 
   .mobile-stack .table-actions .btn,
   .mobile-stack .mobile-actions > .btn {
-    min-height: 40px;
+    min-height: 44px;
     margin: 0;
   }
 
@@ -1390,6 +1390,17 @@ textarea {
   .member-table .form-control {
     width: 100%;
     min-width: 0;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 22px;
+    height: 22px;
+  }
+
+  #name-input {
+    width: 100% !important;
+    max-width: 100%;
   }
 
   .network-actions {
