@@ -157,6 +157,43 @@ ZTNCUI_ADMIN_PASSWORD=你的强密码
 
 这种模式不会创建一次性密码文件。
 
+### 忘记或需要重置 ztncui 密码
+
+在容器 Console 中直接执行：
+
+```bash
+sovereignctl ztncui-reset-password
+```
+
+默认重置 `admin`，命令会隐藏输入并要求输入两遍新密码。成功后会：
+
+1. 原子更新 `/data/ztncui/passwd` 中对应用户的 Argon2 密码哈希；
+2. 删除旧的 `initial-admin-password`（如果存在）；
+3. 轮换 `session.secret`，使已有浏览器登录会话失效；
+4. 自动重启容器，使新密码立即生效。
+
+因此在 Portainer Console 中执行后连接短暂断开是正常现象。项目默认的 `restart: unless-stopped` 会自动拉起容器。
+
+也可以自动生成强随机密码：
+
+```bash
+sovereignctl ztncui-reset-password --generate
+```
+
+重置其他管理员：
+
+```bash
+sovereignctl ztncui-reset-password --user 用户名
+```
+
+自动化或维护脚本若希望自行决定何时重启：
+
+```bash
+sovereignctl ztncui-reset-password --generate --no-restart
+```
+
+使用 `--no-restart` 后必须手工重启容器，新密码才会被正在运行的 ztncui 进程重新载入。
+
 ## 端口
 
 | 端口 | 协议 | 用途 | 默认宿主机绑定 |

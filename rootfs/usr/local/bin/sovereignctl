@@ -4,6 +4,9 @@ set -Eeuo pipefail
 SHARE=/usr/local/share/zerotier-sovereign
 CONTROLLER_HOME=${CONTROLLER_HOME:-/data/controller/one}
 CONTROLLER_ZT_PORT=${CONTROLLER_ZT_PORT:-9993}
+ZTNCUI_STATE_DIR=${ZTNCUI_STATE_DIR:-/data/ztncui}
+ZTNCUI_APP_DIR=${ZTNCUI_APP_DIR:-/opt/ztncui}
+ZTNCUI_MIN_PASSWORD_LENGTH=10
 
 readf() { [[ -s "$1" ]] && tr -d '\r\n' < "$1" || printf 'unknown'; }
 
@@ -46,6 +49,146 @@ ztncui_initial_password() {
   else
     echo >&2 "Initial ztncui admin password is not available (it may already have been changed)."
     return 1
+  fi
+}
+
+ztncui_reset_password() {
+  local username=admin
+  local generate=false
+  local restart=true
+  local password=""
+  local confirm=""
+  local passwd_file="$ZTNCUI_STATE_DIR/passwd"
+  local initial_password_file="$ZTNCUI_STATE_DIR/initial-admin-password"
+  local session_secret_file="$ZTNCUI_STATE_DIR/session.secret"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --generate)
+        generate=true
+        shift
+        ;;
+      --no-restart)
+        restart=false
+        shift
+        ;;
+      --user)
+        [[ $# -ge 2 ]] || { echo >&2 "Missing value for --user"; return 2; }
+        username=$2
+        shift 2
+        ;;
+      -h|--help)
+        cat <<'TXT'
+Usage:
+  sovereignctl ztncui-reset-password [--user USER] [--generate] [--no-restart]
+
+Options:
+  --user USER     Reset this ztncui user. Default: admin
+  --generate      Generate a strong random password and print it.
+  --no-restart    Do not restart the container after the reset.
+
+Without --generate, the new password is requested interactively twice.
+By default the command rotates the ztncui session secret and restarts the
+container so the new credential is loaded immediately and old sessions expire.
+TXT
+        return 0
+        ;;
+      *)
+        echo >&2 "Unknown option: $1"
+        return 2
+        ;;
+    esac
+  done
+
+  [[ -s "$passwd_file" ]] || {
+    echo >&2 "ztncui password database not found: $passwd_file"
+    echo >&2 "Start ztncui once before using the reset command."
+    return 1
+  }
+
+  if [[ "$generate" == true ]]; then
+    password=$(node -e 'process.stdout.write(require("crypto").randomBytes(24).toString("base64url"))')
+  else
+    if [[ ! -t 0 ]]; then
+      echo >&2 "Interactive password entry requires a TTY. Use --generate for non-interactive use."
+      return 2
+    fi
+    read -r -s -p "New password for $username: " password
+    echo
+    read -r -s -p "Confirm new password: " confirm
+    echo
+    [[ "$password" == "$confirm" ]] || {
+      echo >&2 "Passwords do not match."
+      return 2
+    }
+  fi
+
+  (( ${#password} >= ZTNCUI_MIN_PASSWORD_LENGTH )) || {
+    echo >&2 "Password must be at least $ZTNCUI_MIN_PASSWORD_LENGTH characters."
+    return 2
+  }
+
+  (
+    cd "$ZTNCUI_APP_DIR"
+    PASSWD_FILE="$passwd_file" RESET_USER="$username" RESET_PASSWORD="$password" node <<'JS'
+const fs = require('fs');
+const argon2 = require('argon2');
+
+(async () => {
+  const file = process.env.PASSWD_FILE;
+  const username = process.env.RESET_USER;
+  const password = process.env.RESET_PASSWORD;
+  const users = JSON.parse(fs.readFileSync(file, 'utf8'));
+
+  if (!users[username]) {
+    console.error(`ztncui user not found: ${username}`);
+    process.exit(3);
+  }
+
+  const hash = await argon2.hash(password);
+  users[username] = {
+    ...users[username],
+    name: username,
+    pass_set: true,
+    hash
+  };
+
+  const tmp = `${file}.tmp.${process.pid}`;
+  fs.writeFileSync(tmp, JSON.stringify(users), { mode: 0o600 });
+  fs.chmodSync(tmp, 0o600);
+  fs.renameSync(tmp, file);
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+JS
+  )
+
+  chmod 600 "$passwd_file"
+
+  # A password reset is also a credential-recovery event: expire all old
+  # browser sessions after the ztncui process reloads.
+  umask 077
+  local session_tmp="${session_secret_file}.tmp.$"
+  node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex") + "\n")' > "$session_tmp"
+  chmod 600 "$session_tmp"
+  mv -f "$session_tmp" "$session_secret_file"
+
+  if [[ "$username" == admin ]]; then
+    rm -f "$initial_password_file"
+  fi
+
+  echo "ztncui password reset successfully for user: $username"
+  if [[ "$generate" == true ]]; then
+    echo "New password: $password"
+  fi
+
+  if [[ "$restart" == true ]]; then
+    echo "Restarting container so the new password takes effect and old sessions expire..."
+    echo "Portainer Console disconnecting is expected."
+    nohup sh -c 'sleep 1; kill -TERM 1' >/dev/null 2>&1 &
+  else
+    echo "Container restart skipped. Restart the container before using the new password."
   fi
 }
 
@@ -94,6 +237,7 @@ case "${1:-}" in
   planet) shift; exec planetctl "$@" ;;
   controller-status) controller_status ;;
   ztncui-initial-password) ztncui_initial_password ;;
+  ztncui-reset-password) shift; ztncui_reset_password "$@" ;;
   *)
     cat <<'TXT'
 Usage: sovereignctl <command>
@@ -105,6 +249,7 @@ Commands:
   planet <command>    Pass through to planetctl.
   controller-status   Query the local Controller service API.
   ztncui-initial-password  Show the one-time generated admin password before it is changed.
+  ztncui-reset-password    Reset a ztncui password; defaults to admin and restarts the container.
 TXT
     ;;
 esac

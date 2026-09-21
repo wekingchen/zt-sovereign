@@ -5,6 +5,7 @@
 - v0.6.0 首次启动默认生成随机一次性 admin 密码，而不是使用上游默认 `admin/password`。
 - 一次性密码存放在 `/data/ztncui/initial-admin-password`，权限为 0600；首次改密成功后会删除。
 - 如果设置 `ZTNCUI_ADMIN_PASSWORD`，请使用强随机密码并避免把它提交到仓库。
+- 忘记 ztncui 密码时使用 `sovereignctl ztncui-reset-password`；它会更新 Argon2 哈希、轮换 session secret 并使已有登录会话失效，不要通过删除整个 `/data/ztncui` 来恢复密码。
 - PLANET 文件服务默认只绑定宿主机 `127.0.0.1:3001`，并使用持久化随机 key。
 - Controller HTTP API 不映射到宿主机，仅供同容器 ztncui 访问。
 - PLANET identity、World signing keys 与 Controller identity 是长期信任根；不要通过删除后重建来处理普通故障。
