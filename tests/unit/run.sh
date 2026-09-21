@@ -6,4 +6,5 @@ cd "$ROOT"
 python3 ./tests/unit/test_file_server.py
 python3 ./tests/unit/test_ztncui_zh_cn.py
 python3 ./tests/unit/test_ztncui_modern_ui.py
+python3 ./tests/unit/test_actions_node24.py
 ./tests/unit/test_version_sync.sh
