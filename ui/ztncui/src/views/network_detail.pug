@@ -88,7 +88,7 @@ block net_content
 
     if members.length > 0
       .table-responsive
-        table.table.table-striped.table-hover.member-table
+        table.table.table-striped.table-hover.member-table.mobile-stack
           thead
             tr
               th 成员名称
@@ -104,22 +104,22 @@ block net_content
               - const peer = member.peer;
               - const url = nwurl + '/member/' + member.id
               tr
-                td
+                td.mobile-wide(data-label='成员名称')
                   input.form-control.text(type='text' name=member.id value=member.name)
-                td
+                td.mobile-wide(data-label='成员 ID')
                   a.mono-link(href=url) #{member.id}
-                td
+                td.mobile-half(data-label='已授权')
                   input.authCheck(type='checkbox' value=member.id checked=(member.authorized? true : false))
-                td
+                td.mobile-half(data-label='活动桥接')
                   input.bridgeCheck(type='checkbox' value=member.id checked=(member.activeBridge? true : false))
-                td
+                td.mobile-wide(data-label='IP 分配')
                   each ipAssignment in member.ipAssignments
                     a.mono-link(href=nwurl + '/member/' + member.id + '/ipAssignments')
                       = ipAssignment
                       = ' '
                   else
                     a(href=nwurl + '/member/' + member.id + '/ipAssignments') 设置 IP
-                td
+                td.mobile-half(data-label='节点状态')
                   if (peer && peer.latency != -1 && peer.versionMajor != -1)
                     if (peer.latency != -1)
                       span.status-pill.status-online 在线 · v#{peer.version}
@@ -129,7 +129,7 @@ block net_content
                     span.status-pill.status-controller 控制器
                   else
                     span.status-pill.status-offline 离线
-                td
+                td.mobile-wide(data-label='节点地址 / 延迟')
                   if (peer)
                     each path in peer.paths
                       if (path.preferred == true)
@@ -140,7 +140,7 @@ block net_content
                           br
                           span.muted #{peer.latency} 毫秒
                         - break
-                td
+                td.mobile-actions.mobile-half(data-label='操作')
                   a.btn.btn-link.btn-sm.btn-link-danger(href=url + '/delete')
                     span.glyphicon.glyphicon-trash.nav-icon
                     | 删除
