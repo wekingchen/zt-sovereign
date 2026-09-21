@@ -13,6 +13,8 @@ users_layout = (views / "users_layout.pug").read_text(encoding="utf-8")
 login_layout = (views / "login_layout.pug").read_text(encoding="utf-8")
 networks = (views / "networks.pug").read_text(encoding="utf-8")
 member_detail = (views / "member_detail.pug").read_text(encoding="utf-8")
+member_delete = (views / "member_delete.pug").read_text(encoding="utf-8")
+not_implemented = (views / "not_implemented.pug").read_text(encoding="utf-8")
 network_detail = (views / "network_detail.pug").read_text(encoding="utf-8")
 
 required_css = [
@@ -72,6 +74,10 @@ if "返回成员列表" in member_detail:
     errors.append("member_detail.pug has duplicate return action")
 if "返回网络列表" in network_detail:
     errors.append("network_detail.pug has duplicate return action")
+if "返回成员列表" in member_delete:
+    errors.append("member_delete.pug has duplicate return action")
+if "返回成员列表" in not_implemented:
+    errors.append("not_implemented.pug has duplicate return action")
 
 if errors:
     print("\n".join(errors))
