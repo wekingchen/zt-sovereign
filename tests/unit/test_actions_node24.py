@@ -35,9 +35,11 @@ for path in sorted(workflow_dir.glob("*.y*ml")):
     for token in deprecated_literals:
         if token in text:
             errors.append(f"{path.relative_to(root)}: deprecated Node 20 action remains: {token}")
+    if "runs-on: ubuntu-latest" in text:
+        errors.append(f"{path.relative_to(root)}: ubuntu-latest is not allowed; pin ubuntu-24.04 explicitly")
 
 if errors:
     print("\n".join(errors))
     raise SystemExit(1)
 
-print("PASS test_actions_node24")
+print("PASS test_actions_node24_and_runner_pins")
