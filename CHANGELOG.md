@@ -10,6 +10,7 @@
 - 修正 Bootstrap 3 中错误使用 `table.table-responsive` 的旧结构，改为标准响应式表格容器。
 - 新增 `test_ztncui_modern_ui.py`，检查响应式 viewport、核心 UI 组件和关键功能钩子，防止后续样式升级破坏交互。
 - 保持 ZeroTier 1.16.2 单二进制双实例架构及全部现有功能行为不变。
+- 新增 `sovereignctl ztncui-reset-password`，支持交互式或随机密码恢复；重置时轮换 ztncui session secret，并默认自动重启容器使新凭据立即生效。
 
 
 ## v0.5.0
