@@ -28,10 +28,11 @@ html(lang='zh-CN')
     nav.navbar.navbar-inverse.navbar-fixed-top
       .container-fluid.app-container
         .navbar-header
-          button.navbar-toggle(type='button' data-toggle='collapse' data-target='#BarNav' aria-expanded='false' aria-label='展开导航')
-            span.icon-bar
-            span.icon-bar
-            span.icon-bar
+          block nav_toggle
+            button.navbar-toggle(type='button' data-toggle='collapse' data-target='#BarNav' aria-expanded='false' aria-label='展开导航')
+              span.icon-bar
+              span.icon-bar
+              span.icon-bar
           a.navbar-brand(href='/controller')
             span.brand-mark
               i.glyphicon.glyphicon-random
