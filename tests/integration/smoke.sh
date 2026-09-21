@@ -108,5 +108,30 @@ grep -Eq '^HTTP/[^ ]+ 302' "$headers"
 grep -Eqi '^location: /controller' "$headers"
 rm -f "$headers"
 
+# Recovery path: reset an already-changed admin password, rotate sessions,
+# restart ztncui/container, and verify the replacement credential works.
+reset_output=$(docker compose exec -T sovereign sovereignctl ztncui-reset-password --generate --no-restart)
+reset_password=$(printf '%s\n' "$reset_output" | sed -n 's/^New password: //p')
+[[ ${#reset_password} -ge 20 ]]
+printf '%s\n' "$reset_output" | grep -q '^ztncui password reset successfully for user: admin
+printf '%s\n' "$reset_output" | grep -q '^Container restart skipped\.'
+
+docker compose restart sovereign >/dev/null
+wait_healthy
+
+headers=$(mktemp)
+curl -sS -D "$headers" -o /dev/null \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'username=admin' \
+  --data-urlencode "password=$reset_password" \
+  "http://127.0.0.1:${ZTNCUI_PORT:-3000}/login"
+grep -Eq '^HTTP/[^ ]+ 302' "$headers"
+grep -Eqi '^location: /controller' "$headers"
+rm -f "$headers"
+
+if docker compose exec -T sovereign test -e /data/ztncui/initial-admin-password; then
+  echo >&2 "bootstrap password file reappeared after reset"
+  exit 1
+fi
 
 echo "PASS integration smoke"
