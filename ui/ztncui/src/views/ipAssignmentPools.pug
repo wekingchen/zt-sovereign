@@ -10,17 +10,18 @@ block net_content
     table.table.table-striped.table-hover
       thead
         tr
-          th
           th 起始 IP
           th 结束 IP
+          th 操作
       tbody
         each ipAssignmentPool in network.ipAssignmentPools
           tr
-            td
-              a.btn.btn-link.btn-sm(href='/controller/network/' + network.nwid + '/ipAssignmentPools/' + ipAssignmentPool.ipRangeStart + '/' + ipAssignmentPool.ipRangeEnd + '/delete' title='删除 IP 分配池')
-                i.glyphicon.glyphicon-trash
             td.mono-text= ipAssignmentPool.ipRangeStart
             td.mono-text= ipAssignmentPool.ipRangeEnd
+            td
+              a.btn.btn-link.btn-sm.btn-link-danger(href='/controller/network/' + network.nwid + '/ipAssignmentPools/' + ipAssignmentPool.ipRangeStart + '/' + ipAssignmentPool.ipRangeEnd + '/delete')
+                span.glyphicon.glyphicon-trash.nav-icon
+                | 删除
 
   .section-heading
     div
