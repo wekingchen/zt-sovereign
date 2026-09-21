@@ -90,9 +90,9 @@ exports.network_list = async function(req, res) {
 
   try {
     networks = await zt.network_list();
-    res.render('networks', {title: '此控制器上的网络', navigate: navigate, networks: networks});
+    res.render('networks', {title: '网络管理', navigate: navigate, networks: networks});
   } catch (err) {
-    res.render('networks', {title: '此控制器上的网络', navigate: navigate, error: uiError('获取控制器网络列表失败', err)});
+    res.render('networks', {title: '网络管理', navigate: navigate, error: uiError('获取控制器网络列表失败', err)});
   }
 };
 
@@ -122,7 +122,7 @@ exports.network_detail = async function(req, res) {
 exports.network_create_get = function(req, res) {
   const navigate =
     {
-      active: 'add_network',
+      active: 'networks',
     }
 
   res.render('network_create', {title: '创建网络', navigate: navigate});
@@ -132,7 +132,7 @@ exports.network_create_get = function(req, res) {
 exports.network_create_post = async function(req, res) {
   const navigate =
     {
-      active: 'add_network',
+      active: 'networks',
     }
 
   req.checkBody('name', '请输入网络名称').notEmpty();
