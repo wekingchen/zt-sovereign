@@ -5,25 +5,34 @@
 
 extends users_layout
 
+block users_heading_meta
+  p.muted 管理可登录此控制台的管理员账号
+
+block users_heading_action
+  if users && Object.keys(users).length
+    a.btn.btn-primary(href='/users/create')
+      span.glyphicon.glyphicon-plus.nav-icon
+      | 新建管理员
+
 block users_content
   if users && Object.keys(users).length
     .table-responsive
       table.table.table-striped.table-hover
         thead
           tr
-            th
             th 管理员
             th 操作
         tbody
           each user in users
             tr
               td
-                a.btn.btn-link.btn-sm(href='/users/' + user.name + '/delete' title='删除管理员')
-                  i.glyphicon.glyphicon-trash
+                strong= user.name
               td
-                a.network-name(href='/users/' + user.name + '/password') #{user.name}
-              td
-                a.btn.btn-default.btn-sm(href='/users/' + user.name + '/password') 设置密码
+                .table-actions
+                  a.btn.btn-default.btn-sm(href='/users/' + user.name + '/password') 设置密码
+                  a.btn.btn-link.btn-sm.btn-link-danger(href='/users/' + user.name + '/delete')
+                    span.glyphicon.glyphicon-trash.nav-icon
+                    | 删除
   else
     .empty-state
       span.glyphicon.glyphicon-user.empty-state-icon
