@@ -732,11 +732,6 @@ a .glyphicon-trash,
     border-radius: 10px;
   }
 
-  .table-shell .table,
-  .table-responsive .table {
-    min-width: 720px;
-  }
-
   .form-group .col-sm-2,
   .form-group .col-sm-10,
   .form-group .col-sm-12 {
@@ -781,10 +776,6 @@ a .glyphicon-trash,
 }
 
 @media (max-width: 420px) {
-  .network-actions {
-    grid-template-columns: 1fr;
-  }
-
   .brand-title {
     font-size: 14px;
   }
@@ -1190,5 +1181,327 @@ a .glyphicon-trash,
   .context-back {
     order: -1;
     align-self: flex-start;
+  }
+}
+
+/* Mobile-first fit: iOS safe areas, dynamic viewport and card tables */
+:root {
+  --zt-safe-top: env(safe-area-inset-top, 0px);
+  --zt-safe-right: env(safe-area-inset-right, 0px);
+  --zt-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --zt-safe-left: env(safe-area-inset-left, 0px);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+button,
+a,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mono-text,
+.mono-link,
+.detail-value,
+.metric-content strong,
+.metric-content a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@supports (height: 100dvh) {
+  .app-main {
+    min-height: calc(100dvh - 138px);
+  }
+
+  .auth-shell {
+    min-height: calc(100dvh - 150px);
+  }
+}
+
+@media (max-width: 767px) {
+  body {
+    padding-top: calc(64px + var(--zt-safe-top));
+  }
+
+  .navbar {
+    min-height: calc(64px + var(--zt-safe-top));
+    height: auto;
+    padding-top: var(--zt-safe-top);
+  }
+
+  .navbar-inverse .navbar-header,
+  .navbar-inverse .navbar-brand {
+    min-height: 64px;
+    height: 64px;
+  }
+
+  .navbar-inverse .navbar-collapse {
+    max-height: calc(100vh - 64px - var(--zt-safe-top));
+    padding-right: max(14px, var(--zt-safe-right));
+    padding-bottom: calc(16px + var(--zt-safe-bottom));
+    padding-left: max(14px, var(--zt-safe-left));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @supports (height: 100dvh) {
+    .navbar-inverse .navbar-collapse {
+      max-height: calc(100dvh - 64px - var(--zt-safe-top));
+    }
+
+    .app-main {
+      min-height: calc(100dvh - 64px - var(--zt-safe-top) - var(--zt-safe-bottom));
+    }
+
+    .auth-shell {
+      min-height: calc(100dvh - 64px - var(--zt-safe-top) - var(--zt-safe-bottom));
+    }
+  }
+
+  .app-container {
+    padding-left: max(12px, var(--zt-safe-left));
+    padding-right: max(12px, var(--zt-safe-right));
+  }
+
+  .app-footer {
+    padding-bottom: calc(18px + var(--zt-safe-bottom));
+  }
+
+  /* Prevent iOS Safari from zooming the page when a form control receives focus. */
+  input.form-control,
+  textarea.form-control,
+  select.form-control {
+    font-size: 16px;
+  }
+
+  /* Mobile tables become self-contained cards; no horizontal dragging. */
+  .table-responsive {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .mobile-stack {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+    border: 0;
+    background: transparent;
+  }
+
+  .mobile-stack thead {
+    display: none;
+  }
+
+  .mobile-stack tbody {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .mobile-stack tbody > tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--zt-border);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 5px 14px rgba(15, 23, 42, .045);
+  }
+
+  .mobile-stack tbody > tr > td {
+    display: block;
+    grid-column: 1 / -1;
+    width: auto !important;
+    min-width: 0;
+    padding: 10px 12px;
+    border-top: 1px solid #edf0f5;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .mobile-stack tbody > tr > td:first-child {
+    border-top: 0;
+  }
+
+  .mobile-stack tbody > tr > td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    color: var(--zt-text-soft);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1.25;
+    letter-spacing: .02em;
+  }
+
+  .mobile-stack tbody > tr > td.mobile-half {
+    grid-column: span 1;
+  }
+
+  .mobile-stack tbody > tr > td.mobile-wide {
+    grid-column: 1 / -1;
+  }
+
+  .mobile-stack .mono-text,
+  .mobile-stack .mono-link {
+    display: inline;
+    font-size: 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-stack .table-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .mobile-stack .table-actions .btn,
+  .mobile-stack .mobile-actions > .btn {
+    min-height: 40px;
+    margin: 0;
+  }
+
+  .mobile-stack .mobile-actions {
+    align-self: stretch;
+  }
+
+  .mobile-stack .mobile-add-row {
+    background: #f8fbff;
+  }
+
+  .member-table td {
+    white-space: normal;
+  }
+
+  .member-table .form-control {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .network-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .network-actions .btn {
+    min-width: 0;
+    padding-right: 9px;
+    padding-left: 9px;
+    font-size: 13px;
+    white-space: normal;
+  }
+
+  .page-heading,
+  .section-heading {
+    gap: 10px;
+  }
+
+  .page-heading > .btn,
+  .section-heading > .btn {
+    width: auto;
+    align-self: flex-start;
+  }
+
+  .metric-card {
+    min-height: 86px;
+    padding: 16px;
+  }
+
+  .hero-panel {
+    margin-bottom: 16px;
+    padding: 16px;
+  }
+
+  .hero-panel h1 {
+    font-size: clamp(22px, 6vw, 28px);
+  }
+
+  .empty-state {
+    padding: 30px 16px;
+  }
+
+  .detail-label,
+  .detail-value {
+    padding-right: 11px;
+    padding-left: 11px;
+  }
+}
+
+/* Narrow iPhones: SE / mini class screens. Keep two action columns where possible. */
+@media (max-width: 359px) {
+  .app-container {
+    padding-left: max(9px, var(--zt-safe-left));
+    padding-right: max(9px, var(--zt-safe-right));
+  }
+
+  .page-surface {
+    padding: 14px 11px;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+    margin-right: 8px;
+  }
+
+  .brand-title {
+    font-size: 13px;
+  }
+
+  .network-actions {
+    gap: 6px;
+  }
+
+  .network-actions .btn {
+    min-height: 42px;
+    padding: 7px 6px;
+    font-size: 12px;
+  }
+
+  .mobile-stack tbody > tr > td {
+    padding: 9px 10px;
+  }
+
+  .mobile-stack tbody > tr > td.mobile-half {
+    min-width: 0;
+  }
+
+  .status-pill {
+    padding-right: 7px;
+    padding-left: 7px;
+    font-size: 11px;
+  }
+}
+
+/* Landscape iPhone: use the extra width instead of stretching every card vertically. */
+@media (max-width: 767px) and (orientation: landscape) and (min-width: 568px) {
+  .metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .metric-card-action {
+    grid-column: auto;
+  }
+
+  .network-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mobile-stack tbody > tr {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
