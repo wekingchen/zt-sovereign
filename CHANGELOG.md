@@ -6,8 +6,9 @@
 - 新增统一设计系统：深色品牌导航、内容卡片、现代按钮/表单/告警、状态徽章、空状态与危险操作样式。
 - 首页升级为 Controller 状态仪表盘。
 - 网络列表、网络详情、成员状态、成员 IP、路由、DNS、IP 分配池、IPv4/IPv6 分配、管理员与登录页统一现代化。
-- 桌面端采用宽屏内容布局；移动端支持折叠导航、双列/单列动作区、44px 触控按钮、详情字段纵向重排与表格横向触控滚动。
-- 修正 Bootstrap 3 中错误使用 `table.table-responsive` 的旧结构，改为标准响应式表格容器。
+- 桌面端采用宽屏内容布局；移动端采用 iOS 优先适配：折叠导航、44px 触控目标、详情字段纵向重排，并将主要数据表自动转换为字段卡片以消除横向拖动。
+- 修正 Bootstrap 3 中错误使用 `table.table-responsive` 的旧结构，并在手机宽度下把网络、管理员、成员、路由、IP 分配池和 IP 分配表格转换为卡片布局。
+- 增加 iOS Safe Area、`100dvh`、16px 表单输入、320–430px 常见 iPhone 宽度和横屏优化，兼容刘海/灵动岛/Home Indicator 与 Safari 动态地址栏。
 - 新增 `test_ztncui_modern_ui.py`，检查响应式 viewport、核心 UI 组件和关键功能钩子，防止后续样式升级破坏交互。
 - 保持 ZeroTier 1.16.2 单二进制双实例架构及全部现有功能行为不变。
 - 新增 `sovereignctl ztncui-reset-password`，支持交互式或随机密码恢复；重置时轮换 ztncui session secret，并默认自动重启容器使新凭据立即生效。
