@@ -7,7 +7,7 @@ extends network_layout
 
 block net_content
   .table-responsive
-    table.table.table-striped.table-hover
+    table.table.table-striped.table-hover.mobile-stack
       thead
         tr
           th 起始 IP
@@ -16,9 +16,9 @@ block net_content
       tbody
         each ipAssignmentPool in network.ipAssignmentPools
           tr
-            td.mono-text= ipAssignmentPool.ipRangeStart
-            td.mono-text= ipAssignmentPool.ipRangeEnd
-            td
+            td.mono-text(data-label='起始 IP')= ipAssignmentPool.ipRangeStart
+            td.mono-text(data-label='结束 IP')= ipAssignmentPool.ipRangeEnd
+            td.mobile-actions(data-label='操作')
               a.btn.btn-link.btn-sm.btn-link-danger(href='/controller/network/' + network.nwid + '/ipAssignmentPools/' + ipAssignmentPool.ipRangeStart + '/' + ipAssignmentPool.ipRangeEnd + '/delete')
                 span.glyphicon.glyphicon-trash.nav-icon
                 | 删除
