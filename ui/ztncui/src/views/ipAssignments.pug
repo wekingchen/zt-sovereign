@@ -28,21 +28,23 @@ block net_content
       table.table.table-striped.table-hover
         thead
           tr
-            th
             th IP 地址
+            th 操作
         tbody
           each ipAssignment, index in member.ipAssignments
             tr
-              td
-                a.btn.btn-link.btn-sm(role='button' href='/controller/network/' + network.nwid + '/member/' + member.id + '/ipAssignments/' + index + '/delete' title='删除 IP')
-                  i.glyphicon.glyphicon-trash
               td.mono-text= ipAssignment
+              td
+                a.btn.btn-link.btn-sm.btn-link-danger(role='button' href='/controller/network/' + network.nwid + '/member/' + member.id + '/ipAssignments/' + index + '/delete')
+                  span.glyphicon.glyphicon-trash.nav-icon
+                  | 删除
           tr
             td
-              button.btn.btn-link.btn-sm(type='submit' title='添加 IP')
-                i.glyphicon.glyphicon-plus
-            td
               input#ipAddress.form-control(type='text' name='ipAddress' placeholder='输入 IP 地址' value=(undefined===ipAssignment? '' : ipAssignment.ipAddress))
+            td
+              button.btn.btn-primary.btn-sm(type='submit')
+                span.glyphicon.glyphicon-plus.nav-icon
+                | 添加
 
     .section-heading
       div
@@ -54,17 +56,18 @@ block net_content
       table.table.table-striped.table-hover
         thead
           tr
-            th
             th 目标网段
             th 网关
+            th 操作
         tbody
           each route in network.routes
             tr
-              td
-                a.btn.btn-link.btn-sm(role='button' href='/controller/network/' + network.nwid + '/routes/' + route.target + '/delete' title='删除路由')
-                  i.glyphicon.glyphicon-trash
               td.mono-text= route.target
               td.mono-text= route.via
+              td
+                a.btn.btn-link.btn-sm.btn-link-danger(role='button' href='/controller/network/' + network.nwid + '/routes/' + route.target + '/delete')
+                  span.glyphicon.glyphicon-trash.nav-icon
+                  | 删除
 
   if errors
     .alert.alert-warning

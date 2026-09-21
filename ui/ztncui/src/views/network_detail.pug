@@ -53,9 +53,9 @@ block net_content
   - const nwurl = '/controller/network/' + network.nwid;
 
   .network-actions
-    a.btn.btn-primary(href=(nwurl + '/private') role='button')
+    a.btn.btn-default(href=(nwurl + '/private') role='button')
       span.glyphicon.glyphicon-lock.nav-icon
-      = network.private ? "私有网络" : "公开网络"
+      = network.private ? "访问控制 · 私有" : "访问控制 · 公开"
     a.btn.btn-default(href=(nwurl + '/easy') role='button') 快速设置
     a.btn.btn-default(href=(nwurl + '/routes') role='button') 受管路由
     a.btn.btn-default(href=(nwurl + '/ipAssignmentPools') role='button') IP 分配池
@@ -91,7 +91,6 @@ block net_content
         table.table.table-striped.table-hover.member-table
           thead
             tr
-              th
               th 成员名称
               th 成员 ID
               th 已授权
@@ -99,14 +98,12 @@ block net_content
               th IP 分配
               th 节点状态
               th 节点地址 / 延迟
+              th 操作
           tbody
             each member in members
               - const peer = member.peer;
               - const url = nwurl + '/member/' + member.id
               tr
-                td
-                  a.btn.btn-link.btn-sm(href=url + '/delete' title='删除成员')
-                    i.glyphicon.glyphicon-trash
                 td
                   input.form-control.text(type='text' name=member.id value=member.name)
                 td
@@ -143,6 +140,10 @@ block net_content
                           br
                           span.muted #{peer.latency} 毫秒
                         - break
+                td
+                  a.btn.btn-link.btn-sm.btn-link-danger(href=url + '/delete')
+                    span.glyphicon.glyphicon-trash.nav-icon
+                    | 删除
     else
       .empty-state
         span.glyphicon.glyphicon-link.empty-state-icon
@@ -163,7 +164,3 @@ block net_content
         .detail-value
           +json_value(value)
 
-  .action-bar(style='margin-top: 22px;')
-    a.btn.btn-default(href='/controller/networks' name='networks' role='button')
-      span.glyphicon.glyphicon-th-list.nav-icon
-      | 返回网络列表

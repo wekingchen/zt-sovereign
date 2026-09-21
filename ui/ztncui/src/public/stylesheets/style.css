@@ -1141,3 +1141,54 @@ a .glyphicon-trash,
     max-width: none;
   }
 }
+
+/* UX hierarchy refinements */
+.context-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.context-heading {
+  min-width: 0;
+}
+
+.context-heading h2 {
+  margin-bottom: 8px;
+}
+
+.context-heading h3 {
+  margin: 8px 0 0;
+}
+
+.context-back {
+  flex: 0 0 auto;
+}
+
+.btn-link-danger {
+  color: #b42318;
+}
+
+.btn-link-danger:hover,
+.btn-link-danger:focus {
+  color: #912018;
+  background: #fff1f2;
+}
+
+.table-actions .btn-link-danger {
+  margin-left: 2px;
+}
+
+@media (max-width: 767px) {
+  .context-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .context-back {
+    order: -1;
+    align-self: flex-start;
+  }
+}

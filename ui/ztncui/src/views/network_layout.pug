@@ -10,8 +10,8 @@ block content
     .alert.alert-danger
       strong #{error}
   else
-    .row
-      .col-sm-10
+    .context-header
+      .context-heading
         block network_title
           .network-heading
             h2
@@ -21,9 +21,7 @@ block content
         block title
           if title
             h3= title
-      .col-sm-2
-        .text-right
-          a.btn.btn-default(href=navigate.whence role='button')
-            span.glyphicon.glyphicon-chevron-left.nav-icon
-            | 返回
+      a.btn.btn-default.context-back(href=navigate.whence role='button')
+        span.glyphicon.glyphicon-chevron-left.nav-icon
+        | 返回
     block net_content

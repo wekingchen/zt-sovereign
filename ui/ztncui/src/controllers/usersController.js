@@ -52,10 +52,10 @@ exports.users_list = async function(req, res) {
 
   try {
     const users = await get_users();
-    res.render('users', { title: '管理员用户', navigate: navigate, message: '具有管理员权限的用户列表', users: users });
+    res.render('users', { title: '管理员', navigate: navigate, message: '具有管理员权限的用户列表', users: users });
   } catch (err) {
     console.error('获取管理员用户列表失败', err);
-    res.render('users', { title: '管理员用户', navigate: navigate, message: '错误', users: null, error: '获取管理员用户列表失败，详情请查看容器日志。' });
+    res.render('users', { title: '管理员', navigate: navigate, message: '错误', users: null, error: '获取管理员用户列表失败，详情请查看容器日志。' });
   }
 }
 
@@ -141,7 +141,7 @@ exports.password_post = async function(req, res) {
 exports.user_create_get = async function(req, res) {
   const navigate =
     {
-      active: 'create_user',
+      active: 'users',
     }
 
   const user =
@@ -157,7 +157,7 @@ exports.user_create_get = async function(req, res) {
 exports.user_create_post = async function(req, res) {
   const navigate =
     {
-      active: 'create_user',
+      active: 'users',
     }
 
   res.redirect(307, '/users/' + req.body.username + '/password');

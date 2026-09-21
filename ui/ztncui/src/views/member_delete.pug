@@ -9,7 +9,6 @@ block net_content
   if member.deleted
     .alert.alert-success
       strong #{member.name} (#{member.id}) 已删除
-    a.btn.btn-default(href=('/controller/network/' + network.nwid + '#members') name='networks' role='button') 返回成员列表
   else
     .danger-panel
       h4 删除成员

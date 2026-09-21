@@ -8,6 +8,14 @@ css = (ui / "public" / "stylesheets" / "style.css").read_text(encoding="utf-8")
 head = (views / "head_layout.pug").read_text(encoding="utf-8")
 detail = (views / "network_detail.pug").read_text(encoding="utf-8")
 login = (views / "login.pug").read_text(encoding="utf-8")
+controller_layout = (views / "controller_layout.pug").read_text(encoding="utf-8")
+users_layout = (views / "users_layout.pug").read_text(encoding="utf-8")
+login_layout = (views / "login_layout.pug").read_text(encoding="utf-8")
+networks = (views / "networks.pug").read_text(encoding="utf-8")
+member_detail = (views / "member_detail.pug").read_text(encoding="utf-8")
+member_delete = (views / "member_delete.pug").read_text(encoding="utf-8")
+not_implemented = (views / "not_implemented.pug").read_text(encoding="utf-8")
+network_detail = (views / "network_detail.pug").read_text(encoding="utf-8")
 
 required_css = [
     "--zt-primary:",
@@ -20,6 +28,8 @@ required_css = [
     ".detail-grid",
     ".metric-grid",
     ".setting-row",
+    ".context-header",
+    ".btn-link-danger",
     "@media (max-width: 767px)",
 ]
 errors = [f"style.css missing {token}" for token in required_css if token not in css]
@@ -46,6 +56,28 @@ for token in (".authCheck", ".bridgeCheck", ".text", "h3#members"):
 for token in ("name='username'", "name='password'"):
     if token not in login:
         errors.append(f"login.pug lost functional field {token}")
+
+# Global navigation contains modules only; creation actions are contextual.
+for label in ("新建网络", "新建管理员"):
+    if label in controller_layout or label in users_layout:
+        errors.append(f"global navigation must not contain contextual action {label}")
+
+if "block nav_toggle" not in login_layout or "block nav_login" not in login_layout:
+    errors.append("login layout must suppress redundant navbar actions")
+
+# Empty/list states must not render two primary creation CTAs at once.
+if "if networks && networks.length" not in networks:
+    errors.append("networks.pug must conditionally separate populated and empty CTAs")
+
+# Context header is the single return mechanism on nested network pages.
+if "返回成员列表" in member_detail:
+    errors.append("member_detail.pug has duplicate return action")
+if "返回网络列表" in network_detail:
+    errors.append("network_detail.pug has duplicate return action")
+if "返回成员列表" in member_delete:
+    errors.append("member_delete.pug has duplicate return action")
+if "返回成员列表" in not_implemented:
+    errors.append("not_implemented.pug has duplicate return action")
 
 if errors:
     print("\n".join(errors))
