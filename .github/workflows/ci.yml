@@ -12,7 +12,7 @@ jobs:
   lint-unit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install lint tools
         run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: ShellCheck
@@ -38,9 +38,9 @@ jobs:
     needs: lint-unit
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Load build pins and choose cache scope
         shell: bash
@@ -62,7 +62,7 @@ jobs:
           sed -i 's/^PLANET_IP_ADDR4=.*/PLANET_IP_ADDR4=127.0.0.1/' .env
 
       - name: Build amd64 image with persistent BuildKit cache
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
